@@ -6,7 +6,7 @@
 General purpose languages: used to build anything. For example: C++, C, Java, Python etc.
 Domain-specific languages: can only be used for specific things. For example: Make, YAML, HTML, CSS etc.
 
-## Challenge 1.1: 
+## Challenge 1.1
 **Q. Find 6 domain-specific languages used in creating the book**
 - Make
 - YAML
