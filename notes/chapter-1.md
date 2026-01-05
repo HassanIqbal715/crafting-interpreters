@@ -3,7 +3,7 @@
 - bootstraping: Compile newer version of a language using itself and discard the older ones.
 
 ## General purpose languages vs Domain-specific languages
-General purpose languages: used to build anything. For example: C++, C, Java, Python etc.
+General purpose languages: used to build anything. For example: C++, C, Java, Python etc.<br>
 Domain-specific languages: can only be used for specific things. For example: Make, YAML, HTML, CSS etc.
 
 ## Challenge 1.1
