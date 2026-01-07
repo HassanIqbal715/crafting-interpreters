@@ -80,6 +80,8 @@ class Scanner {
                 if (match('/')) {
                     // look till the end of the comment
                     while(peek() != '\n' && !isAtEnd()) advance();
+                } else if (match('*')) {
+                    multiLineComment();
                 } else {
                     addToken(TokenType.SLASH);
                 }
@@ -108,6 +110,30 @@ class Scanner {
                 break;
         }
     }    
+
+    // Skip over multi-line comments
+    private void multiLineComment() {
+        while (!isAtEnd()) {
+            // end of comment reached
+            if (peek() == '*' && peekNext() == '/') {
+                // adjust the pointer
+                advance();
+                advance();
+                return;
+            }
+
+            if (peek() == '\n') line++; // increment for new line
+
+            // incrementing current pointer to prevent infinite recursion.
+            advance();
+        }
+
+        // end of file reached, but the comment did not end.
+        if (isAtEnd()) {
+            Lox.error(line, "Unterminated multi-line comment!");
+            return;
+        }
+    }
 
     // Check for identifier
     private void identifier() {
