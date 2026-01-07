@@ -1,5 +1,5 @@
-Main: Main.java
-	javac -cp Main Main.java
+Main: Lox.java
+	javac -cp Lox Lox.java Scanner.java Token.java TokenType.java
 
 run:
-	@java Main
+	@java Lox
