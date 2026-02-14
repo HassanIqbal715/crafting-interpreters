@@ -30,6 +30,11 @@ class Rpn implements Expr.Visitor<Void> {
         return null;
     }
     
+    @Override
+    public Void visitTernaryExpr(Expr.Ternary expr) {
+        return null;
+    }
+
     void pushBuffer(Object value) {
         buffer.append(value).append(" ");
     }

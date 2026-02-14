@@ -1,11 +1,14 @@
 package lox;
 
+import java.util.List;
+
 abstract class Expr {
 	interface Visitor<R> {
 		R visitBinaryExpr(Binary expr);
 		R visitGroupingExpr(Grouping expr);
 		R visitLiteralExpr(Literal expr);
 		R visitUnaryExpr(Unary expr);
+		R visitTernaryExpr(Ternary expr);
 	}
 
 	static class Binary extends Expr {
@@ -63,6 +66,27 @@ abstract class Expr {
 		}
 
 		final Token operator;
+		final Expr right;
+	}
+
+	static class Ternary extends Expr {
+		Ternary(Expr left, Token operator1, Expr mid, Token operator2, Expr right) {
+			this.left = left;
+			this.operator1 = operator1;
+			this.mid = mid;
+			this.operator2 = operator2;
+			this.right = right;
+		}
+
+		@Override
+		<R> R accept(Visitor<R> visitor) {
+			return visitor.visitTernaryExpr(this);
+		}
+
+		final Expr left;
+		final Token operator1;
+		final Expr mid;
+		final Token operator2;
 		final Expr right;
 	}
 
