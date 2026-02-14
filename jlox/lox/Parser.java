@@ -23,7 +23,43 @@ class Parser {
     }
 
     private Expr expression() {
-        return equality();
+        return comma();
+    }
+
+    // comma -> equality ("," equality)*;
+    private Expr comma() {
+        Expr expr = ternary();
+
+        while (match(COMMA)) {
+            Token operator = previous();
+            Expr right = ternary();
+            expr = new Expr.Binary(expr, operator, right);
+        }
+
+        return expr;
+    }
+
+    private Expr ternary() {
+        Expr expr = equality();
+
+        while (match(QUESTION)) {
+            Token operator1 = previous();
+            Expr mid = expression();
+
+            Token operator2;
+            if (match(COLON)) {
+                operator2 = previous();
+            }
+            else {
+                throw error(peek(), "Expect colon ':''.");
+            }
+
+            Expr right = ternary();
+            
+            expr = new Expr.Ternary(expr, operator1, mid, operator2, right);
+        }
+
+        return expr;
     }
 
     private Expr equality() {
