@@ -28,6 +28,10 @@ class Parser {
 
     // comma -> equality ("," equality)*;
     private Expr comma() {
+        if (match(COMMA)) {
+            error(previous(), "Expect left expression.");
+        }
+
         Expr expr = ternary();
 
         while (match(COMMA)) {
@@ -63,6 +67,10 @@ class Parser {
     }
 
     private Expr equality() {
+        if (match(BANG_EQUAL, EQUAL_EQUAL)) {
+            error(previous(), "Expect left expression.");
+        }
+
         Expr expr = comparison();
 
         while (match(BANG_EQUAL, EQUAL_EQUAL)) {
@@ -75,6 +83,10 @@ class Parser {
     }
 
     private Expr comparison() {
+        if (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
+            error(previous(), "Expect left expression.");
+        }
+
         Expr expr = term();
 
         while (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
@@ -87,6 +99,10 @@ class Parser {
     }
 
     private Expr term() {
+        if (match(MINUS, PLUS)) {
+            error(previous(), "Expect left expression.");
+        }
+
         Expr expr = factor();
 
         while (match(MINUS, PLUS)) {
@@ -99,8 +115,12 @@ class Parser {
     }
 
     private Expr factor() {
-        Expr expr = unary();
+        if (match(STAR, SLASH)) {
+            error(previous(), "Expect left expression.");
+        }
 
+        Expr expr;
+        expr = unary();
         while (match(STAR, SLASH)) {
             Token operator = previous();
             Expr right = unary();
@@ -174,7 +194,7 @@ class Parser {
 
     private Token previous() {
         return tokens.get(current - 1);
-    }  
+    }
     
     private ParseError error(Token token, String message) {
         Lox.error(token, message);
