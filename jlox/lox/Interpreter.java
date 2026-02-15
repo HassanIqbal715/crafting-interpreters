@@ -44,6 +44,13 @@ class Interpreter implements Expr.Visitor<Object> {
         throw new RuntimeError(operator, "Operands must be numbers");
     }
     
+    private void checkNumberOperands(Token operator, 
+                                     Object left, Object mid, Object right) {
+        if (left instanceof Boolean) return;
+
+        throw new RuntimeError(operator, "Left operand must be a condition");
+    }
+    
     private boolean isTruthy(Object object) {
         if (object == null) return false;
         if (object instanceof Boolean) return (boolean)object;
@@ -121,6 +128,24 @@ class Interpreter implements Expr.Visitor<Object> {
                 checkNumberOperands(expr.operator, left, right);
                 return (double)left * (double)right;
             default: break;
+        }
+        
+        // Unreachable
+        return null;
+    }
+
+    @Override
+    public Object visitTernaryExpr(Expr.Ternary expr) {
+        Object right = evaluate(expr.right);
+        Object mid = evaluate(expr.mid);
+        Object left = evaluate(expr.left);
+        
+        checkNumberOperands(expr.operator1, left, mid, right); 
+        if ((boolean) left == true) {
+            return mid;
+        }
+        else if ((boolean) left == false) {
+            return right;
         }
         
         // Unreachable
