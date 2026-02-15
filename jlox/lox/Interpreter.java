@@ -44,10 +44,8 @@ class Interpreter implements Expr.Visitor<Object> {
         throw new RuntimeError(operator, "Operands must be numbers");
     }
     
-    private void checkNumberOperands(Token operator, 
-                                     Object left, Object mid, Object right) {
+    private void checkTernaryOperand(Token operator, Object left) {
         if (left instanceof Boolean) return;
-
         throw new RuntimeError(operator, "Left operand must be a condition");
     }
     
@@ -140,7 +138,7 @@ class Interpreter implements Expr.Visitor<Object> {
         Object mid = evaluate(expr.mid);
         Object left = evaluate(expr.left);
         
-        checkNumberOperands(expr.operator1, left, mid, right); 
+        checkTernaryOperand(expr.operator1, left); 
         if ((boolean) left == true) {
             return mid;
         }
