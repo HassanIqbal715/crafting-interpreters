@@ -58,4 +58,35 @@ and also at / and then at \*. Need to escape out while reporting errors.
 
 Runtime error should not kill the interpreter. It just needs to report the err.
 
-### 
+### Challenges
+#### 7.1 Comparison among different types.
+I would compare types like numbers with strings. Strings are made up of 
+characters that have some ascii value. That value can be used for inter-type
+comparison. The order would be decided based on which number is greater.
+
+Similarly, boolean types have 0 or 1 value which can also be compared. with
+strings and numbers.
+
+Another method like JavaScript would be to use numerical value of numbers
+enclosed in strings, but Idk about that. It spoils the comparison for other
+characters. I would just like to keep things simple.
+
+#### 7.3 What happens when a number is divided by 0?
+In Lox, that leads to Infinity if a number > 0 is divided by. For 0 / 0 it
+evaluates to NaN (not a number). I was expecting it to evaluate just like that
+because of how jlox on Robert Nystorm's copy of jlox acts (discovered when
+playing with it).
+
+I believe that it should not be allowed because of all the danger that Infinity
+holds. Returning nil would be really bad for the code too. Throwing an error is
+the safest way to deal with it.
+
+**How do different languages deal with division by 0?**<br>
+Languages often deal with integer division by 0 and float division by 0
+differently. Since Lox deals with numbers in floating point, I will only
+be focusing on that.
+
+- IEEE 754 Standard is for division by 0 to return `Infinity` and `NaN` just 
+  like Java, JavaScript, C/C++ and R.
+- Python raises ZeroDivisionError due to program safety? Probably.
+
