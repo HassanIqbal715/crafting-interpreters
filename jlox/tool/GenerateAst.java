@@ -19,6 +19,11 @@ public class GenerateAst {
             "Unary    : Token operator, Expr right",
             "Ternary  : Expr left, Token operator1, Expr mid, Token operator2, Expr right"
         ));
+
+        defineAst(outputDir, "Stmt", Arrays.asList(
+            "Expression : Expr expression",
+            "Print : Expr expression"
+        ));
     }
 
     private static void defineAst(
