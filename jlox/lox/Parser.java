@@ -17,7 +17,7 @@ class Parser {
     List<Stmt> parse() {
         List<Stmt> statements = new ArrayList<>();
         while(!isAtEnd()) {
-            statements.add(statement());
+            statements.add(declaration());
         }
 
         return statements;
@@ -25,6 +25,18 @@ class Parser {
 
     private Expr expression() {
         return comma();
+    }
+
+    private Stmt declaration() {
+        try {
+            if (match(VAR)) return varDeclaration();
+
+            return statement();
+        }
+        catch (ParseError error) {
+            synchronize();
+            return null;
+        }
     }
 
     private Stmt statement() {
@@ -39,6 +51,19 @@ class Parser {
        return new Stmt.Print(value);    
     }
 
+    private Stmt varDeclaration() {
+        Token name = consume(IDENTIFIER, "Expect variable name");
+
+        Expr initializer = null;
+        
+        if (match(EQUAL)) {
+            initializer = expression();
+        }
+
+        consume(SEMICOLON, "Expect ';' after variable declaration");
+        return new Stmt.Var(name, initializer);
+    }
+
     private Stmt expressionStatement() {
         Expr expr = expression();
         consume(SEMICOLON, "Expect ';' after the value.");
@@ -47,9 +72,9 @@ class Parser {
 
     // comma -> equality ("," equality)*;
     private Expr comma() {
-        if (match(COMMA)) {
-            error(previous(), "Expect left expression.");
-        }
+        // if (match(COMMA)) {
+        //     error(previous(), "Expect left expression.");
+        // }
 
         Expr expr = ternary();
 
@@ -86,9 +111,9 @@ class Parser {
     }
 
     private Expr equality() {
-        if (match(BANG_EQUAL, EQUAL_EQUAL)) {
-            error(previous(), "Expect left expression.");
-        }
+        // if (match(BANG_EQUAL, EQUAL_EQUAL)) {
+        //     error(previous(), "Expect left expression.");
+        // }
 
         Expr expr = comparison();
 
@@ -102,9 +127,9 @@ class Parser {
     }
 
     private Expr comparison() {
-        if (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
-            error(previous(), "Expect left expression.");
-        }
+        // if (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
+        //     error(previous(), "Expect left expression.");
+        // }
 
         Expr expr = term();
 
@@ -118,9 +143,9 @@ class Parser {
     }
 
     private Expr term() {
-        if (match(MINUS, PLUS)) {
-            error(previous(), "Expect left expression.");
-        }
+        // if (match(MINUS, PLUS)) {
+        //     error(previous(), "Expect left expression.");
+        // }
 
         Expr expr = factor();
 
@@ -134,9 +159,9 @@ class Parser {
     }
 
     private Expr factor() {
-        if (match(STAR, SLASH)) {
-            error(previous(), "Expect left expression.");
-        }
+        // if (match(STAR, SLASH)) {
+        //     error(previous(), "Expect left expression.");
+        // }
 
         Expr expr;
         expr = unary();
@@ -165,6 +190,10 @@ class Parser {
 
         if (match(NUMBER, STRING)) {
             return new Expr.Literal(previous().literal);
+        }
+
+        if (match(IDENTIFIER)) {
+            return new Expr.Variable(previous());
         }
 
         if (match(LEFT_PAREN)) {
@@ -220,25 +249,27 @@ class Parser {
         return new ParseError();
     } 
 
-    // private void synchronize() {
-    //     advance();
+    private void synchronize() {
+        advance();
 
-    //     while (!isAtEnd()) {
-    //     if (previous().type == SEMICOLON) return;
+        while (!isAtEnd()) {
+        if (previous().type == SEMICOLON) return;
         
-    //     switch (peek().type) {
-    //         case CLASS:
-    //         case FUN:
-    //         case VAR:
-    //         case FOR:
-    //         case IF:
-    //         case WHILE:
-    //         case PRINT:
-    //         case RETURN:
-    //         return;
-    //     }
+        switch (peek().type) {
+            case CLASS:
+            case FUN:
+            case VAR:
+            case FOR:
+            case IF:
+            case WHILE:
+            case PRINT:
+            case RETURN:
+            return;
+            default:
+            return;
+        }
 
-    //     advance();
-    //     }
-    // }
+            // advance();
+        }
+    }
 }
