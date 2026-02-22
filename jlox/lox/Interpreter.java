@@ -22,8 +22,23 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     @Override
+    public Object visitLogicalExpr(Expr.Logical expr) {
+        Object left = evaluate(expr.left);
+
+        if (expr.operator.type == TokenType.OR) {
+            if (isTruthy(left)) return left;
+        }
+        else {
+            if (!isTruthy(left)) return left;
+        }
+
+        return evaluate(expr.right);
+    }
+
+    @Override
     public Object visitUnaryExpr(Expr.Unary expr) {
         Object right = evaluate(expr.right);
+        double value;
 
         switch(expr.operator.type) {
             case BANG:
@@ -31,11 +46,41 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
             case MINUS:
                 checkNumberOperand(expr.operator, right);
                 return -(double)right;
+            case MINUS_MINUS:
+                checkVariableOperand(expr.operator, expr.right);
+                value = (double) right - 1;
+                environment.assign(((Expr.Variable)expr.right).name, value);
+                return value;
+            case PLUS_PLUS:
+                checkVariableOperand(expr.operator, expr.right);
+                value = (double) right + 1;
+                environment.assign(((Expr.Variable)expr.right).name, value);
+                return value;
             default: break;
         }
 
         // Unreachable
         return null;
+    }
+
+    @Override
+    public Object visitPostfixExpr(Expr.Postfix expr) {
+        Object value = evaluate(expr.left);
+
+        checkVariableOperand(expr.operator, expr.left);
+
+        double actualValue = (double)value;
+        double newValue = (double)value;
+
+        if (expr.operator.type == TokenType.PLUS_PLUS) {
+            newValue += 1;
+        }
+        else if (expr.operator.type == TokenType.MINUS_MINUS) {
+            newValue -=1;
+        }
+        
+        environment.assign(((Expr.Variable)expr.left).name, newValue);
+        return actualValue;
     }
 
     @Override
@@ -53,7 +98,12 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         if (left instanceof Double && right instanceof Double) return;
         throw new RuntimeError(operator, "Operands must be numbers");
     }
-    
+
+    private void checkVariableOperand(Token operator, Object operand) {
+        if (operand instanceof Expr.Variable) return;
+        throw new RuntimeError(operator, "Operand must be a variable");
+    }
+
     private void checkTernaryOperand(Token operator, Object left) {
         if (left instanceof Boolean) return;
         throw new RuntimeError(operator, "Left operand must be a condition");
@@ -138,13 +188,25 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
                 
                 if ((double)right == 0.0) {
                     throw new RuntimeError(expr.operator, 
-                        "Cannot divide by 0");
+                            "Cannot divide by 0");
                 }
 
                 return (double)left / (double)right;
             case STAR:
                 checkNumberOperands(expr.operator, left, right);
                 return (double)left * (double)right;
+            case MODULO:
+                checkNumberOperands(expr.operator, left, right);
+                
+                if ((double) right == 0.0) {
+                    throw new RuntimeError(expr.operator, 
+                            "Cannot divide by 0");
+                }
+
+                return (double)left % (double)right;
+            case COMMA:
+                checkNumberOperand(expr.operator, right);
+                return right;
             default: break;
         }
         
@@ -178,9 +240,44 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         stmt.accept(this);
     }
 
+    void executeBlock(List<Stmt> statements, Environment environment) {
+        Environment previous = this.environment;
+        try {
+            this.environment = environment;
+
+            for (Stmt statement : statements) {
+                execute(statement);
+            }
+        } 
+        finally {
+            this.environment = previous;
+        }
+    }
+
+    @Override
+    public Void visitBlockStmt(Stmt.Block stmt) {
+        executeBlock(stmt.statements, new Environment(environment));
+        return null;
+    }
+
     @Override
     public Void visitExpressionStmt(Stmt.Expression stmt) {
         evaluate(stmt.expression);
+        // System.out.println(stringify(value));
+        return null;
+    }
+
+    @Override
+    public Void visitIfStmt(Stmt.If stmt) {
+        Object condition = evaluate(stmt.condition);
+
+        if (isTruthy(condition)) {
+            execute(stmt.thenBranch);
+        }
+        else if (stmt.elseBranch != null) {
+            execute(stmt.elseBranch);
+        }
+
         return null;
     }
 
@@ -200,5 +297,29 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
         environment.define(stmt.name.lexeme, value);
         return null;
+    }
+
+    @Override
+    public Void visitWhileStmt(Stmt.While stmt) {
+        while (isTruthy(evaluate(stmt.condition))) {
+            execute(stmt.body);
+        }
+
+        return null;
+    }
+
+    @Override
+    public Void visitCommaDeclarationStmt(Stmt.CommaDeclaration stmt) {
+        for (Stmt.Var var : stmt.declarations) {
+            visitVarStmt(var);
+        }
+        return null;
+    }
+
+    @Override
+    public Object visitAssignExpr(Expr.Assign expr) {
+        Object value = evaluate(expr.value);
+        environment.assign(expr.name, value);
+        return value;
     }
 };

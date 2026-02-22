@@ -1,6 +1,7 @@
 package lox;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import static lox.TokenType.*;
 
@@ -40,9 +41,77 @@ class Parser {
     }
 
     private Stmt statement() {
+        if (match(FOR)) return forStatement();
+        if (match(IF)) return ifStatement();
         if (match(PRINT)) return printStatement();
+        if (match(LEFT_BRACE)) return new Stmt.Block(block());
+        if (match(WHILE)) return whileStatement();
 
         return expressionStatement();
+    }
+
+    private Stmt forStatement() {
+        consume(LEFT_PAREN, "Expected '(' after for.");
+
+        Stmt initializer;
+        if (match(SEMICOLON)) {
+            initializer = null;
+        }
+        else if (match(VAR)) {
+            initializer = varDeclaration();
+        }
+        else {
+            initializer = expressionStatement();
+        }
+
+        Expr condition = null;
+        if (!check(SEMICOLON)) {
+            condition = expression();
+        }
+        consume(SEMICOLON, "Expect ';' after loop condition.");
+
+        Expr increment = null;
+        if (!check(RIGHT_PAREN)) {
+            increment = expression();
+        }
+        consume(RIGHT_PAREN, "Expect ')' after for clauses.");
+
+        Stmt body = statement(); // This is the code
+
+        if (increment != null) {
+            // increment exists, put code followed by the increment statement
+            // in a statement block
+            body = new Stmt.Block(
+            Arrays.asList(
+                body,
+                new Stmt.Expression(increment)));
+        }
+
+        // condition does not exits, while (true);
+        if (condition == null) condition = new Expr.Literal(true);
+        body = new Stmt.While(condition, body); // A while loop
+
+        // initializer exists, first initialize, then execute the while stmt.
+        // put all of that in a block statement.
+        if (initializer != null) {
+            body = new Stmt.Block(Arrays.asList(initializer, body));
+        }
+
+        return body;
+    }
+
+    private Stmt ifStatement() {
+        consume(LEFT_PAREN, "Expect '(' after if.");
+        Expr condition = expression();
+        consume(RIGHT_PAREN, "Expect ')' after if condition");
+
+        Stmt thenBranch = statement();
+        Stmt elseBranch = null;
+
+        if (match(ELSE)) {
+            elseBranch = statement();
+        }
+        return new Stmt.If(condition, thenBranch, elseBranch);
     }
 
     private Stmt printStatement() {
@@ -52,16 +121,32 @@ class Parser {
     }
 
     private Stmt varDeclaration() {
-        Token name = consume(IDENTIFIER, "Expect variable name");
+        List<Stmt.Var> declarations = new ArrayList<>();
 
-        Expr initializer = null;
-        
-        if (match(EQUAL)) {
-            initializer = expression();
-        }
+        do {
+            Token name = consume(IDENTIFIER, "Expect variable name");
+            Expr initializer = null;
+
+            if (match(EQUAL)) {
+                initializer = assignment();
+            }
+
+            declarations.add(new Stmt.Var(name, initializer));
+        } 
+        while(match(COMMA));
 
         consume(SEMICOLON, "Expect ';' after variable declaration");
-        return new Stmt.Var(name, initializer);
+
+        return new Stmt.CommaDeclaration(declarations);
+    }
+
+    private Stmt whileStatement() {
+        consume(LEFT_PAREN, "Expect '(' after 'while'");
+        Expr condition = expression();
+        consume(RIGHT_PAREN, "Expect ')' after condition");
+        Stmt body = statement();
+
+        return new Stmt.While(condition, body);
     }
 
     private Stmt expressionStatement() {
@@ -70,25 +155,50 @@ class Parser {
         return new Stmt.Expression(expr);
     }
 
+    private List<Stmt> block() {
+        List<Stmt> statements = new ArrayList<>();
+
+        while (!check(RIGHT_BRACE) && !isAtEnd()) {
+            statements.add(declaration());
+        }
+
+        consume(RIGHT_BRACE, "Expect '}' after block.");
+        return statements;
+    }
+
     // comma -> equality ("," equality)*;
     private Expr comma() {
-        // if (match(COMMA)) {
-        //     error(previous(), "Expect left expression.");
-        // }
-
-        Expr expr = ternary();
+        Expr expr = assignment();
 
         while (match(COMMA)) {
             Token operator = previous();
-            Expr right = ternary();
+            Expr right = assignment();
             expr = new Expr.Binary(expr, operator, right);
         }
 
         return expr;
     }
 
+    private Expr assignment() {
+        Expr expr = ternary();
+
+        if (match(EQUAL)) {
+        Token equals = previous();
+        Expr value = assignment();
+
+        if (expr instanceof Expr.Variable) {
+            Token name = ((Expr.Variable)expr).name;
+            return new Expr.Assign(name, value);
+        }
+
+        error(equals, "Invalid assignment target.");
+        }
+
+        return expr;
+    }
+
     private Expr ternary() {
-        Expr expr = equality();
+        Expr expr = or();
 
         while (match(QUESTION)) {
             Token operator1 = previous();
@@ -110,11 +220,31 @@ class Parser {
         return expr;
     }
 
-    private Expr equality() {
-        // if (match(BANG_EQUAL, EQUAL_EQUAL)) {
-        //     error(previous(), "Expect left expression.");
-        // }
+    private Expr or() {
+        Expr expr = and();
 
+        while (match(OR)) {
+            Token operator = previous();
+            Expr right = and();
+            expr = new Expr.Logical(expr, operator, right);
+        }
+
+        return expr;
+    }
+
+    private Expr and() {
+        Expr expr = equality();
+        
+        while (match(AND)) {
+            Token operator = previous();
+            Expr right = equality();
+            expr = new Expr.Logical(expr, operator, right);
+        }
+
+        return expr;
+    }
+
+    private Expr equality() {
         Expr expr = comparison();
 
         while (match(BANG_EQUAL, EQUAL_EQUAL)) {
@@ -127,10 +257,6 @@ class Parser {
     }
 
     private Expr comparison() {
-        // if (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
-        //     error(previous(), "Expect left expression.");
-        // }
-
         Expr expr = term();
 
         while (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
@@ -143,10 +269,6 @@ class Parser {
     }
 
     private Expr term() {
-        // if (match(MINUS, PLUS)) {
-        //     error(previous(), "Expect left expression.");
-        // }
-
         Expr expr = factor();
 
         while (match(MINUS, PLUS)) {
@@ -159,13 +281,9 @@ class Parser {
     }
 
     private Expr factor() {
-        // if (match(STAR, SLASH)) {
-        //     error(previous(), "Expect left expression.");
-        // }
-
         Expr expr;
         expr = unary();
-        while (match(STAR, SLASH)) {
+        while (match(STAR, SLASH, MODULO)) {
             Token operator = previous();
             Expr right = unary();
             expr = new Expr.Binary(expr, operator, right);
@@ -175,12 +293,24 @@ class Parser {
     }
 
     private Expr unary() {
-        if (match(BANG, MINUS)) {
+        if (match(BANG, MINUS, PLUS_PLUS, MINUS_MINUS)) {
             Token operator = previous();
             Expr right = unary();
             return new Expr.Unary(operator, right);
         }
-        return primary();
+        return postfix();
+    }
+
+    private Expr postfix() {
+        Expr expr = primary();
+
+        if (match(PLUS_PLUS, MINUS_MINUS)) {
+            Token operator = previous();
+            
+            expr = new Expr.Postfix(expr, operator);
+        }
+
+        return expr;
     }
 
     private Expr primary() {
