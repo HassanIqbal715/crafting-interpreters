@@ -122,17 +122,36 @@ class Parser {
     }
 
     private Stmt varDeclaration() {
-        List<Stmt.Var> declarations = new ArrayList<>();
+        List<Stmt> declarations = new ArrayList<>();
 
         do {
             Token name = consume(IDENTIFIER, "Expect variable name");
-            Expr initializer = null;
 
-            if (match(EQUAL)) {
-                initializer = assignment();
+            if (match(LEFT_SQUARE)) {
+                Expr size = expression();
+                consume(RIGHT_SQUARE, "Expect ']' after size");
+
+                List<Expr> elements = null;
+
+                if (match(EQUAL)) {
+                    elements = new ArrayList<>();
+                    consume(LEFT_BRACE, 
+                            "Expect '{' after array declaration");
+                    do {
+                        elements.add(assignment());
+                    } while (match(COMMA));
+                    consume(RIGHT_BRACE, "Expect '}' after elements");
+                }
+                declarations.add(new Stmt.Arr(name, size, elements));
             }
+            else {
+                Expr initializer = null;
+                if (match(EQUAL)) {
+                    initializer = assignment();
+                }
 
-            declarations.add(new Stmt.Var(name, initializer));
+                declarations.add(new Stmt.Var(name, initializer));
+            }
         } 
         while(match(COMMA));
 
@@ -203,15 +222,23 @@ class Parser {
         Expr expr = ternary();
 
         if (match(EQUAL)) {
-        Token equals = previous();
-        Expr value = assignment();
+            Token equals = previous();
+            Expr value = assignment();
 
-        if (expr instanceof Expr.Variable) {
-            Token name = ((Expr.Variable)expr).name;
-            return new Expr.Assign(name, value);
-        }
+            if (expr instanceof Expr.Variable) {
+                Token name = ((Expr.Variable)expr).name;
+                return new Expr.Assign(name, value);
+            }
+            else if (expr instanceof Expr.Array) {
+                Expr.Array array = (Expr.Array) expr;
 
-        error(equals, "Invalid assignment target.");
+                Token name = array.name;
+                Expr index = array.index;
+
+                return new Expr.AssignArray(name, index, value);
+            }
+
+            error(equals, "Invalid assignment target.");
         }
 
         return expr;
@@ -322,7 +349,7 @@ class Parser {
     }
 
     private Expr postfix() {
-        Expr expr = primary();
+        Expr expr = call();
 
         if (match(PLUS_PLUS, MINUS_MINUS)) {
             Token operator = previous();
@@ -330,6 +357,37 @@ class Parser {
             expr = new Expr.Postfix(expr, operator);
         }
 
+        return expr;
+    }
+
+    private Expr finishCall(Expr callee) {
+        List<Expr> arguments = new ArrayList<>();
+        if (!check(RIGHT_PAREN)) {
+            do {
+                if (arguments.size() >= 255) {
+                    error(peek(), "Can't have more than 255 arguments.");
+                }
+                arguments.add(expression());
+            } while (match(COMMA));
+        }
+
+        Token paren = consume(RIGHT_PAREN,
+                            "Expect ')' after arguments.");
+
+        return new Expr.Call(callee, paren, arguments);
+    }
+
+    private Expr call() {
+        Expr expr = primary();
+
+        while (true) {
+            if (match(LEFT_PAREN)) {
+                expr = finishCall(expr);
+            } 
+            else {
+                break;
+            }
+        }
         return expr;
     }
 
@@ -343,7 +401,13 @@ class Parser {
         }
 
         if (match(IDENTIFIER)) {
-            return new Expr.Variable(previous());
+            Token name = previous();
+            if (match(LEFT_SQUARE)) {
+                Expr expr = expression();
+                consume(RIGHT_SQUARE, "Expect ']' after expression");
+                return new Expr.Array(name, expr);
+            }
+            return new Expr.Variable(name);
         }
 
         if (match(LEFT_PAREN)) {

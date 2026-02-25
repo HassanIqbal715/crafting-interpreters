@@ -4,6 +4,7 @@ import java.util.List;
 
 abstract class Stmt {
 	interface Visitor<R> {
+		R visitArrStmt(Arr stmt);
 		R visitBlockStmt(Block stmt);
 		R visitExpressionStmt(Expression stmt);
 		R visitIfStmt(If stmt);
@@ -11,6 +12,23 @@ abstract class Stmt {
 		R visitVarStmt(Var stmt);
 		R visitWhileStmt(While stmt);
 		R visitCommaDeclarationStmt(CommaDeclaration stmt);
+	}
+
+	static class Arr extends Stmt {
+		Arr(Token name, Expr size, List<Expr> elements) {
+			this.name = name;
+			this.size = size;
+			this.elements = elements;
+		}
+
+		@Override
+		<R> R accept(Visitor<R> visitor) {
+			return visitor.visitArrStmt(this);
+		}
+
+		final Token name;
+		final Expr size;
+		final List<Expr> elements;
 	}
 
 	static class Block extends Stmt {
@@ -100,7 +118,7 @@ abstract class Stmt {
 	}
 
 	static class CommaDeclaration extends Stmt {
-		CommaDeclaration(List<Stmt.Var> declarations) {
+		CommaDeclaration(List<Stmt> declarations) {
 			this.declarations = declarations;
 		}
 
@@ -109,7 +127,7 @@ abstract class Stmt {
 			return visitor.visitCommaDeclarationStmt(this);
 		}
 
-		final List<Stmt.Var> declarations;
+		final List<Stmt> declarations;
 	}
 
 	abstract <R> R accept(Visitor<R> visitor);

@@ -4,8 +4,11 @@ import java.util.List;
 
 abstract class Expr {
 	interface Visitor<R> {
+		R visitArrayExpr(Array expr);
 		R visitAssignExpr(Assign expr);
+		R visitAssignArrayExpr(AssignArray expr);
 		R visitBinaryExpr(Binary expr);
+		R visitCallExpr(Call expr);
 		R visitGroupingExpr(Grouping expr);
 		R visitLiteralExpr(Literal expr);
 		R visitLogicalExpr(Logical expr);
@@ -13,6 +16,21 @@ abstract class Expr {
 		R visitPostfixExpr(Postfix expr);
 		R visitVariableExpr(Variable expr);
 		R visitTernaryExpr(Ternary expr);
+	}
+
+	static class Array extends Expr {
+		Array(Token name, Expr index) {
+			this.name = name;
+			this.index = index;
+		}
+
+		@Override
+		<R> R accept(Visitor<R> visitor) {
+			return visitor.visitArrayExpr(this);
+		}
+
+		final Token name;
+		final Expr index;
 	}
 
 	static class Assign extends Expr {
@@ -27,6 +45,23 @@ abstract class Expr {
 		}
 
 		final Token name;
+		final Expr value;
+	}
+
+	static class AssignArray extends Expr {
+		AssignArray(Token name, Expr index, Expr value) {
+			this.name = name;
+			this.index = index;
+			this.value = value;
+		}
+
+		@Override
+		<R> R accept(Visitor<R> visitor) {
+			return visitor.visitAssignArrayExpr(this);
+		}
+
+		final Token name;
+		final Expr index;
 		final Expr value;
 	}
 
@@ -45,6 +80,23 @@ abstract class Expr {
 		final Expr left;
 		final Token operator;
 		final Expr right;
+	}
+
+	static class Call extends Expr {
+		Call(Expr callee, Token paren, List<Expr> arguments) {
+			this.callee = callee;
+			this.paren = paren;
+			this.arguments = arguments;
+		}
+
+		@Override
+		<R> R accept(Visitor<R> visitor) {
+			return visitor.visitCallExpr(this);
+		}
+
+		final Expr callee;
+		final Token paren;
+		final List<Expr> arguments;
 	}
 
 	static class Grouping extends Expr {

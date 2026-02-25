@@ -1,6 +1,7 @@
 package lox;
 
 import java.util.List;
+import java.util.ArrayList;
 
 class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     private Environment environment = new Environment();
@@ -86,6 +87,14 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     @Override
     public Object visitVariableExpr(Expr.Variable expr) {
         return environment.get(expr.name);
+    }
+
+    @Override
+    public Object visitArrayExpr(Expr.Array expr) {
+        Object indexObject = evaluate(expr.index);
+        checkNumberOperand(expr.name, indexObject);
+        int index = ((Double) indexObject).intValue();
+        return environment.getArray(expr.name, index);
     }
 
     private void checkNumberOperand(Token operator, Object operand) {
@@ -215,6 +224,20 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     @Override
+    public Object visitCallExpr(Expr.Call expr) {
+        Object callee = evaluate(expr.callee);
+
+        List<Object> arguments = new ArrayList<>();
+        
+        for (Expr argument : expr.arguments) {
+            arguments.add(evaluate(argument));
+        }
+
+        LoxCallable function = (LoxCallable)callee;
+        return function.call(this, arguments);
+    }
+
+    @Override
     public Object visitTernaryExpr(Expr.Ternary expr) {
         Object right = evaluate(expr.right);
         Object mid = evaluate(expr.mid);
@@ -252,6 +275,32 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         finally {
             this.environment = previous;
         }
+    }
+
+    @Override 
+    public Void visitArrStmt(Stmt.Arr stmt) {
+        Object sizeObject = evaluate(stmt.size);
+        checkNumberOperand(stmt.name, sizeObject);
+        int size = ((Double) sizeObject).intValue();
+
+        List<Object> elements = new ArrayList<>();
+        if (stmt.elements != null) {
+            if (stmt.elements.size() != size) {
+                throw new RuntimeError(stmt.name, 
+                        "Size of array and number of elements must be equal");
+            }
+            for (int i = 0; i < size; i++) {
+                elements.add(evaluate(stmt.elements.get(i)));
+            }
+        }
+        else {
+            for (int i = 0; i < size; i++) {
+                elements.add(null);
+            }
+        }
+
+        environment.define(stmt.name.lexeme, elements);
+        return null;
     }
 
     @Override
@@ -310,8 +359,8 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
     @Override
     public Void visitCommaDeclarationStmt(Stmt.CommaDeclaration stmt) {
-        for (Stmt.Var var : stmt.declarations) {
-            visitVarStmt(var);
+        for (Stmt declaration : stmt.declarations) {
+            declaration.accept(this);
         }
         return null;
     }
@@ -320,6 +369,15 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     public Object visitAssignExpr(Expr.Assign expr) {
         Object value = evaluate(expr.value);
         environment.assign(expr.name, value);
+        return value;
+    }
+
+    @Override
+    public Object visitAssignArrayExpr(Expr.AssignArray expr) {
+        Object index = evaluate(expr.index);
+        checkNumberOperand(expr.name, index);
+        Object value = evaluate(expr.value);
+        environment.assignArray(expr.name, ((Double)index).intValue(), value);
         return value;
     }
 };
