@@ -1,10 +1,73 @@
 package lox;
 
-import java.util.List;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
 
 class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
-    private Environment environment = new Environment();
+    final Environment globals = new Environment();
+    private Environment environment = globals;
+    private final Map<Expr, Integer> locals = new HashMap<>();
+
+    Interpreter() {
+        // A native function being defined in the global scope
+        globals.define("Clock", new LoxCallable() {
+            @Override
+            public int arity() { return 0; }
+
+            @Override
+            public Object call(Interpreter interpreter, 
+                               List<Object> arguments) {
+                return (double)System.currentTimeMillis() / 1000.0;
+            }
+
+            @Override
+            public String toString() { return "<native> fn"; }
+        });
+
+        globals.define("input", new LoxCallable() {
+            Scanner scanner = new Scanner(System.in);
+
+            @Override
+            public int arity() { return 1; }
+
+            @Override
+            public Object call(Interpreter interpreter,
+                               List<Object> arguments) {
+                System.out.print((String) arguments.get(0));
+                Object input = null;
+                if (scanner.hasNextLine()) {
+                    input = scanner.nextLine();
+                }
+
+                return (String) input;
+            }
+
+            @Override
+            public String toString() { return "<native> fn"; }
+        });
+
+        globals.define("ston", new LoxCallable() {
+            @Override
+            public int arity() { return 1;} 
+
+            @Override 
+            public Object call(Interpreter interpreter, 
+                                  List<Object> arguments) {
+                try {
+                    return Double.parseDouble((String) arguments.get(0));
+                }
+                catch (NumberFormatException err) {
+                    return null;
+                }
+            }
+
+            @Override
+            public String toString() { return "<native> fn"; }
+        });
+    }
 
     void interpret(List<Stmt> statements) {
         try {
@@ -86,15 +149,28 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
     @Override
     public Object visitVariableExpr(Expr.Variable expr) {
-        return environment.get(expr.name);
+        return lookUpVariable(expr.name, expr);
+    }
+
+    private Object lookUpVariable(Token name, Expr expr) {
+        Integer distance = locals.get(expr);
+        if (distance != null) {
+            return environment.getAt(distance, name.lexeme);
+        }
+        else {
+            return globals.get(name);
+        }
     }
 
     @Override
     public Object visitArrayExpr(Expr.Array expr) {
-        Object indexObject = evaluate(expr.index);
-        checkNumberOperand(expr.name, indexObject);
-        int index = ((Double) indexObject).intValue();
-        return environment.getArray(expr.name, index);
+        List<Integer> indices = new ArrayList<>();
+        for (Expr indexExpr : expr.indices) {
+            Object indexObject = evaluate(indexExpr);
+            checkNumberOperand(expr.name, indexObject);
+            indices.add(((Double) indexObject).intValue());
+        }
+        return environment.getArray(expr.name, indices);
     }
 
     private void checkNumberOperand(Token operator, Object operand) {
@@ -234,7 +310,24 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         }
 
         LoxCallable function = (LoxCallable)callee;
+        if (function.arity() != arguments.size()) {
+            throw new RuntimeError(expr.paren, "Expected " + function.arity() +
+                " arguments but got " + arguments.size() + ".");
+        }
+
         return function.call(this, arguments);
+    }
+
+    @Override
+    public Object visitElementsExpr(Expr.Elements expr) {
+        List<Expr> elementsExpr = expr.elements;
+        List<Object> elements = new ArrayList<>();
+
+        for (Expr elementExpr : elementsExpr) {
+            elements.add(evaluate(elementExpr));
+        }
+
+        return elements;
     }
 
     @Override
@@ -263,6 +356,10 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         stmt.accept(this);
     }
 
+    void resolve(Expr expr, int depth) {
+        locals.put(expr, depth);
+    }
+
     void executeBlock(List<Stmt> statements, Environment environment) {
         Environment previous = this.environment;
         try {
@@ -279,26 +376,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
     @Override 
     public Void visitArrStmt(Stmt.Arr stmt) {
-        Object sizeObject = evaluate(stmt.size);
-        checkNumberOperand(stmt.name, sizeObject);
-        int size = ((Double) sizeObject).intValue();
-
-        List<Object> elements = new ArrayList<>();
-        if (stmt.elements != null) {
-            if (stmt.elements.size() != size) {
-                throw new RuntimeError(stmt.name, 
-                        "Size of array and number of elements must be equal");
-            }
-            for (int i = 0; i < size; i++) {
-                elements.add(evaluate(stmt.elements.get(i)));
-            }
-        }
-        else {
-            for (int i = 0; i < size; i++) {
-                elements.add(null);
-            }
-        }
-
+        Object elements = evaluate(stmt.elements);
         environment.define(stmt.name.lexeme, elements);
         return null;
     }
@@ -310,9 +388,21 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     @Override
+    public Void visitBreakStmt(Stmt.Break stmt) {
+        throw new Break();
+    }
+
+    @Override
     public Void visitExpressionStmt(Stmt.Expression stmt) {
         evaluate(stmt.expression);
         // System.out.println(stringify(value));
+        return null;
+    }
+
+    @Override
+    public Void visitFunctionStmt(Stmt.Function stmt) {
+        LoxFunction function = new LoxFunction(stmt, environment);
+        environment.define(stmt.name.lexeme, function);
         return null;
     }
 
@@ -338,6 +428,16 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     @Override
+    public Void visitReturnStmt(Stmt.Return stmt) {
+        Object value = null;
+        if (stmt.value != null) {
+            value = evaluate(stmt.value);
+        }
+
+        throw new Return(value);
+    }
+
+    @Override
     public Void visitVarStmt(Stmt.Var stmt) {
         Object value = null;
         if (stmt.initializer != null) {
@@ -350,9 +450,12 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
     @Override
     public Void visitWhileStmt(Stmt.While stmt) {
-        while (isTruthy(evaluate(stmt.condition))) {
-            execute(stmt.body);
+        try {
+            while (isTruthy(evaluate(stmt.condition))) {
+                execute(stmt.body);
+            }
         }
+        catch(Break err){}
 
         return null;
     }
@@ -368,16 +471,28 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     @Override
     public Object visitAssignExpr(Expr.Assign expr) {
         Object value = evaluate(expr.value);
-        environment.assign(expr.name, value);
+
+        Integer distance = locals.get(expr);
+        if (distance != null) {
+            environment.assignAt(distance, expr.name, value);
+        }
+        else {
+            globals.assign(expr.name, value);
+        }
         return value;
     }
 
     @Override
     public Object visitAssignArrayExpr(Expr.AssignArray expr) {
-        Object index = evaluate(expr.index);
-        checkNumberOperand(expr.name, index);
         Object value = evaluate(expr.value);
-        environment.assignArray(expr.name, ((Double)index).intValue(), value);
+
+        List<Integer> indices = new ArrayList<>();
+        for (Expr indexExpr : expr.indices) {
+            Object index = evaluate(indexExpr);
+            checkNumberOperand(expr.name, index);
+            indices.add(((Double)index).intValue());
+        }
+        environment.assignArray(expr.name, indices, value);
         return value;
     }
 };

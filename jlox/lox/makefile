@@ -1,5 +1,5 @@
 Main: Lox.java
-	javac -cp Lox Lox.java Scanner.java Token.java TokenType.java AstPrinter.java Parser.java Expr.java Interpreter.java RuntimeError.java Stmt.java Environment.java
+	javac -cp Lox Lox.java Scanner.java Token.java TokenType.java Parser.java Expr.java Interpreter.java RuntimeError.java Stmt.java Environment.java LoxFunction.java LoxCallable.java Return.java Break.java Resolver.java
 
 run:
 	@java lox.Lox

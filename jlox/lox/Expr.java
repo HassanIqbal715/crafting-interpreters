@@ -10,6 +10,7 @@ abstract class Expr {
 		R visitBinaryExpr(Binary expr);
 		R visitCallExpr(Call expr);
 		R visitGroupingExpr(Grouping expr);
+		R visitElementsExpr(Elements expr);
 		R visitLiteralExpr(Literal expr);
 		R visitLogicalExpr(Logical expr);
 		R visitUnaryExpr(Unary expr);
@@ -19,9 +20,9 @@ abstract class Expr {
 	}
 
 	static class Array extends Expr {
-		Array(Token name, Expr index) {
+		Array(Token name, List<Expr> indices) {
 			this.name = name;
-			this.index = index;
+			this.indices = indices;
 		}
 
 		@Override
@@ -30,7 +31,7 @@ abstract class Expr {
 		}
 
 		final Token name;
-		final Expr index;
+		final List<Expr> indices;
 	}
 
 	static class Assign extends Expr {
@@ -49,9 +50,9 @@ abstract class Expr {
 	}
 
 	static class AssignArray extends Expr {
-		AssignArray(Token name, Expr index, Expr value) {
+		AssignArray(Token name, List<Expr> indices, Expr value) {
 			this.name = name;
-			this.index = index;
+			this.indices = indices;
 			this.value = value;
 		}
 
@@ -61,7 +62,7 @@ abstract class Expr {
 		}
 
 		final Token name;
-		final Expr index;
+		final List<Expr> indices;
 		final Expr value;
 	}
 
@@ -110,6 +111,19 @@ abstract class Expr {
 		}
 
 		final Expr expression;
+	}
+
+	static class Elements extends Expr {
+		Elements(List<Expr> elements) {
+			this.elements = elements;
+		}
+
+		@Override
+		<R> R accept(Visitor<R> visitor) {
+			return visitor.visitElementsExpr(this);
+		}
+
+		final List<Expr> elements;
 	}
 
 	static class Literal extends Expr {

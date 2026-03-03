@@ -30,6 +30,7 @@ class Parser {
 
     private Stmt declaration() {
         try {
+            if (match(FUN)) return function("function");
             if (match(VAR)) return varDeclaration();
 
             return statement();
@@ -44,9 +45,11 @@ class Parser {
         if (match(FOR)) return forStatement();
         if (match(IF)) return ifStatement();
         if (match(PRINT)) return printStatement();
+        if (match(RETURN)) return returnStatement();
         if (match(LEFT_BRACE)) return new Stmt.Block(block());
         if (match(WHILE)) return whileStatement();
         if (match(DO)) return doStatement();
+        if (match(BREAK)) return breakStatement();
 
         return expressionStatement();
     }
@@ -121,38 +124,27 @@ class Parser {
        return new Stmt.Print(value);    
     }
 
+    private Stmt returnStatement() {
+        Token keyword = previous();
+        Expr value = null;
+        if (!check(SEMICOLON)) {
+            value = expression();
+        }
+        consume(SEMICOLON, "Expect ';' after return value.");
+        return new Stmt.Return(keyword, value);
+    }
+
     private Stmt varDeclaration() {
         List<Stmt> declarations = new ArrayList<>();
 
         do {
             Token name = consume(IDENTIFIER, "Expect variable name");
-
-            if (match(LEFT_SQUARE)) {
-                Expr size = expression();
-                consume(RIGHT_SQUARE, "Expect ']' after size");
-
-                List<Expr> elements = null;
-
-                if (match(EQUAL)) {
-                    elements = new ArrayList<>();
-                    consume(LEFT_BRACE, 
-                            "Expect '{' after array declaration");
-                    do {
-                        elements.add(assignment());
-                    } while (match(COMMA));
-                    consume(RIGHT_BRACE, "Expect '}' after elements");
-                }
-                declarations.add(new Stmt.Arr(name, size, elements));
+            Expr initializer = null;
+            if (match(EQUAL)) {
+                initializer = assignment();
             }
-            else {
-                Expr initializer = null;
-                if (match(EQUAL)) {
-                    initializer = assignment();
-                }
-
-                declarations.add(new Stmt.Var(name, initializer));
-            }
-        } 
+            declarations.add(new Stmt.Var(name, initializer));
+        }
         while(match(COMMA));
 
         consume(SEMICOLON, "Expect ';' after variable declaration");
@@ -188,10 +180,38 @@ class Parser {
         return body;
     }
 
+    private Stmt breakStatement() {
+        Token keyword = previous();
+        consume(SEMICOLON, "Expect ';' after break");
+        return new Stmt.Break(keyword);
+    }
+
     private Stmt expressionStatement() {
         Expr expr = expression();
         consume(SEMICOLON, "Expect ';' after the value.");
         return new Stmt.Expression(expr);
+    }
+
+    private Stmt.Function function(String kind) {
+        Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
+        consume(LEFT_PAREN, "Expect '(' after " + kind + " name.");
+        List<Token> parameters = new ArrayList<>();
+        
+        if (!check(RIGHT_PAREN)) {
+            do {
+                if (parameters.size() >= 255) {
+                    error(peek(), "Can't have more than 255 parameters.");
+                }
+                parameters.add(
+                    consume(IDENTIFIER, "Expect parameter name.")
+                );
+            } while (match(COMMA));
+        }
+        consume(RIGHT_PAREN, "Expect ')' after parameters.");
+
+        consume(LEFT_BRACE, "Expect '{' before " + kind + " body.");
+        List<Stmt> body = block();
+        return new Stmt.Function(name, parameters, body);
     }
 
     private List<Stmt> block() {
@@ -233,9 +253,9 @@ class Parser {
                 Expr.Array array = (Expr.Array) expr;
 
                 Token name = array.name;
-                Expr index = array.index;
+                List<Expr> indices = array.indices;
 
-                return new Expr.AssignArray(name, index, value);
+                return new Expr.AssignArray(name, indices, value);
             }
 
             error(equals, "Invalid assignment target.");
@@ -403,9 +423,12 @@ class Parser {
         if (match(IDENTIFIER)) {
             Token name = previous();
             if (match(LEFT_SQUARE)) {
-                Expr expr = expression();
-                consume(RIGHT_SQUARE, "Expect ']' after expression");
-                return new Expr.Array(name, expr);
+                List<Expr> indices = new ArrayList<>();
+                do {
+                    indices.add(expression());
+                    consume(RIGHT_SQUARE, "Expect ']' after expression");
+                } while (match(LEFT_SQUARE));
+                return new Expr.Array(name, indices);
             }
             return new Expr.Variable(name);
         }
@@ -414,6 +437,15 @@ class Parser {
             Expr expr = expression();
             consume(RIGHT_PAREN, "Expect ')' after expression.");
             return new Expr.Grouping(expr);
+        }
+
+        if (match(LEFT_BRACE)) {
+            List<Expr> elements = new ArrayList<>();
+            do {
+                elements.add(assignment());
+            } while (match(COMMA));
+            consume(RIGHT_BRACE, "Expect '}' after elements");
+            return new Expr.Elements(elements);
         }
 
         throw error(peek(), "Expect expression.");
