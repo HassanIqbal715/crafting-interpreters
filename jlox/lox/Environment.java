@@ -138,8 +138,17 @@ class Environment {
         return environment;
     }
 
+    Object getArrayAt(int distance, Token name, List<Integer> indices) {
+        return ancestor(distance).getArray(name, indices);
+    }
+
     Object getAt(int distance, String name) {
         return ancestor(distance).values.get(name);
+    }
+
+    void assignArrayAt(int distance, Token name, List<Integer> indices, 
+            Object value) {
+        ancestor(distance).assignArray(name, indices, value);
     }
 
     void assignAt(int distance, Token name, Object value) {

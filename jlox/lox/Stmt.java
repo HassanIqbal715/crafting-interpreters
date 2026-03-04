@@ -7,7 +7,10 @@ abstract class Stmt {
 		R visitArrStmt(Arr stmt);
 		R visitBlockStmt(Block stmt);
 		R visitBreakStmt(Break stmt);
+		R visitContinueStmt(Continue stmt);
+		R visitDoStmt(Do stmt);
 		R visitExpressionStmt(Expression stmt);
+		R visitForStmt(For stmt);
 		R visitFunctionStmt(Function stmt);
 		R visitIfStmt(If stmt);
 		R visitPrintStmt(Print stmt);
@@ -58,6 +61,34 @@ abstract class Stmt {
 		final Token keyword;
 	}
 
+	static class Continue extends Stmt {
+		Continue(Token keyword) {
+			this.keyword = keyword;
+		}
+
+		@Override
+		<R> R accept(Visitor<R> visitor) {
+			return visitor.visitContinueStmt(this);
+		}
+
+		final Token keyword;
+	}
+
+	static class Do extends Stmt {
+		Do(Expr condition, Stmt body) {
+			this.condition = condition;
+			this.body = body;
+		}
+
+		@Override
+		<R> R accept(Visitor<R> visitor) {
+			return visitor.visitDoStmt(this);
+		}
+
+		final Expr condition;
+		final Stmt body;
+	}
+
 	static class Expression extends Stmt {
 		Expression(Expr expression) {
 			this.expression = expression;
@@ -69,6 +100,25 @@ abstract class Stmt {
 		}
 
 		final Expr expression;
+	}
+
+	static class For extends Stmt {
+		For(Stmt initializer, Expr condition, Expr increment, Stmt body) {
+			this.initializer = initializer;
+			this.condition = condition;
+			this.increment = increment;
+			this.body = body;
+		}
+
+		@Override
+		<R> R accept(Visitor<R> visitor) {
+			return visitor.visitForStmt(this);
+		}
+
+		final Stmt initializer;
+		final Expr condition;
+		final Expr increment;
+		final Stmt body;
 	}
 
 	static class Function extends Stmt {

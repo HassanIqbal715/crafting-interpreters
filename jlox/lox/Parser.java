@@ -1,7 +1,6 @@
 package lox;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import static lox.TokenType.*;
 
@@ -50,6 +49,7 @@ class Parser {
         if (match(WHILE)) return whileStatement();
         if (match(DO)) return doStatement();
         if (match(BREAK)) return breakStatement();
+        if (match(CONTINUE)) return continueStatement();
 
         return expressionStatement();
     }
@@ -82,26 +82,11 @@ class Parser {
 
         Stmt body = statement(); // This is the code
 
-        if (increment != null) {
-            // increment exists, put code followed by the increment statement
-            // in a statement block
-            body = new Stmt.Block(
-            Arrays.asList(
-                body,
-                new Stmt.Expression(increment)));
+        if (condition == null) {
+            condition = new Expr.Literal(true);
         }
-
-        // condition does not exits, while (true);
-        if (condition == null) condition = new Expr.Literal(true);
-        body = new Stmt.While(condition, body); // A while loop
-
-        // initializer exists, first initialize, then execute the while stmt.
-        // put all of that in a block statement.
-        if (initializer != null) {
-            body = new Stmt.Block(Arrays.asList(initializer, body));
-        }
-
-        return body;
+        
+        return new Stmt.For(initializer, condition, increment, body);
     }
 
     private Stmt ifStatement() {
@@ -169,21 +154,20 @@ class Parser {
         Expr condition = expression();
         consume(RIGHT_PAREN, "Expect ')' after condition");
         consume(SEMICOLON, "Expect ';' after 'do while'");
-        
-        body = new Stmt.Block(
-            Arrays.asList(
-                body,
-                new Stmt.While(condition, body)
-            )
-        );
 
-        return body;
+        return new Stmt.Do(condition, body);
     }
 
     private Stmt breakStatement() {
         Token keyword = previous();
         consume(SEMICOLON, "Expect ';' after break");
         return new Stmt.Break(keyword);
+    }
+
+    private Stmt continueStatement() {
+        Token keyword = previous();
+        consume(SEMICOLON, "Expect ';' after continue");
+        return new Stmt.Continue(keyword);
     }
 
     private Stmt expressionStatement() {
@@ -441,9 +425,11 @@ class Parser {
 
         if (match(LEFT_BRACE)) {
             List<Expr> elements = new ArrayList<>();
-            do {
-                elements.add(assignment());
-            } while (match(COMMA));
+            if (!check(RIGHT_BRACE)) {
+                do {
+                    elements.add(assignment());
+                } while (match(COMMA));
+            }
             consume(RIGHT_BRACE, "Expect '}' after elements");
             return new Expr.Elements(elements);
         }

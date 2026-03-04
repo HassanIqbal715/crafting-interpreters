@@ -23,7 +23,7 @@ class LoxFunction implements LoxCallable {
         try {
             interpreter.executeBlock(declaration.body, environment);
         }
-        catch (Return returnValue) {
+        catch (Exceptions.Return returnValue) {
             return returnValue.value;
         }
         return null;

@@ -18,7 +18,7 @@ enum TokenType {
 
     // Keywords.
     AND, CLASS, ELSE, FALSE, FUN, FOR, IF, NIL, OR, PRINT, RETURN, SUPER, THIS,
-    TRUE, VAR, WHILE, DO, BREAK,
+    TRUE, VAR, WHILE, DO, BREAK, CONTINUE,
 
     // End of file.
     EOF

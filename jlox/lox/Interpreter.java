@@ -170,7 +170,14 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
             checkNumberOperand(expr.name, indexObject);
             indices.add(((Double) indexObject).intValue());
         }
-        return environment.getArray(expr.name, indices);
+        
+        Integer distance = locals.get(expr);
+        if (distance != null) {
+            return environment.getArrayAt(distance, expr.name, indices);
+        }
+        else {
+            return globals.getArray(expr.name, indices);
+        }
     }
 
     private void checkNumberOperand(Token operator, Object operand) {
@@ -389,13 +396,49 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
     @Override
     public Void visitBreakStmt(Stmt.Break stmt) {
-        throw new Break();
+        throw new Exceptions.Break();
+    }
+
+    @Override
+    public Void visitContinueStmt(Stmt.Continue stmt) {
+        throw new Exceptions.Continue();
+    }
+
+    @Override
+    public Void visitDoStmt(Stmt.Do stmt) {
+        try {
+            do {
+                try {
+                    execute(stmt.body);
+                }
+                catch(Exceptions.Continue exceptionContinue){}
+            } while(isTruthy(evaluate(stmt.condition)));
+        }
+        catch (Exceptions.Break exceptionBreak) {}
+        return null;
     }
 
     @Override
     public Void visitExpressionStmt(Stmt.Expression stmt) {
         evaluate(stmt.expression);
         // System.out.println(stringify(value));
+        return null;
+    }
+
+    @Override
+    public Void visitForStmt(Stmt.For stmt) {
+        if (stmt.initializer != null) execute(stmt.initializer);
+        try {
+            while(isTruthy(evaluate(stmt.condition))) {
+                try {
+                    execute(stmt.body);
+                }
+                catch(Exceptions.Continue exceptioContinue) {}
+                if (stmt.increment != null) evaluate(stmt.increment);
+            }
+        }
+        catch (Exceptions.Break exceptionBreak) {}
+
         return null;
     }
 
@@ -408,9 +451,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
     @Override
     public Void visitIfStmt(Stmt.If stmt) {
-        Object condition = evaluate(stmt.condition);
-
-        if (isTruthy(condition)) {
+        if (isTruthy(evaluate(stmt.condition))) {
             execute(stmt.thenBranch);
         }
         else if (stmt.elseBranch != null) {
@@ -434,7 +475,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
             value = evaluate(stmt.value);
         }
 
-        throw new Return(value);
+        throw new Exceptions.Return(value);
     }
 
     @Override
@@ -452,10 +493,13 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     public Void visitWhileStmt(Stmt.While stmt) {
         try {
             while (isTruthy(evaluate(stmt.condition))) {
-                execute(stmt.body);
+                try {
+                    execute(stmt.body);
+                }
+                catch (Exceptions.Continue exceptionContinue){}
             }
         }
-        catch(Break err){}
+        catch(Exceptions.Break exceptionBreak){}
 
         return null;
     }
@@ -492,7 +536,14 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
             checkNumberOperand(expr.name, index);
             indices.add(((Double)index).intValue());
         }
-        environment.assignArray(expr.name, indices, value);
+
+        Integer distance = locals.get(expr);
+        if (distance != null) {
+            environment.assignArrayAt(distance, expr.name, indices, value);
+        }
+        else {
+            globals.assignArray(expr.name, indices, value);
+        }
         return value;
     }
 };

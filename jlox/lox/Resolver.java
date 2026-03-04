@@ -53,6 +53,14 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     }
 
     @Override
+    public Void visitContinueStmt(Stmt.Continue stmt) {
+        if (!isLoop) {
+            Lox.error(stmt.keyword, "Can't continue outside of a loop");
+        }
+        return null;
+    }
+
+    @Override
     public Void visitCommaDeclarationStmt(Stmt.CommaDeclaration stmt) {
         for (Stmt declaration : stmt.declarations) {
             resolve(declaration);
@@ -61,8 +69,33 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     }
 
     @Override
+    public Void visitDoStmt(Stmt.Do stmt) {
+        resolve(stmt.condition);
+
+        Boolean enclosingLoop = isLoop;
+        isLoop = true;
+        resolve(stmt.body);
+        isLoop = enclosingLoop;
+        return null;
+    }
+
+    @Override
     public Void visitExpressionStmt(Stmt.Expression stmt) {
         resolve(stmt.expression);
+        return null;
+    }
+
+    @Override
+    public Void visitForStmt(Stmt.For stmt) {
+        if (stmt.initializer != null) resolve(stmt.initializer);
+        if (stmt.condition != null) resolve(stmt.condition);
+        if (stmt.increment != null) resolve(stmt.increment);
+        
+        Boolean enclosingLoop = isLoop;
+        isLoop = true;
+        resolve(stmt.body);
+        isLoop = enclosingLoop;
+
         return null;
     }
 
