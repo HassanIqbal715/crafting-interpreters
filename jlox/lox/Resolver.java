@@ -10,6 +10,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     private final Stack<Map<String, Boolean>> scopes = new Stack<>();
     private FunctionType currentFunction = FunctionType.NONE;
     private Boolean isLoop = false;
+    private Boolean isSwitch = false;
 
     Resolver(Interpreter interpreter) {
         this.interpreter = interpreter;
@@ -46,7 +47,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
     @Override
     public Void visitBreakStmt(Stmt.Break stmt) {
-        if (!isLoop) {
+        if (!isLoop && !isSwitch) {
             Lox.error(stmt.keyword, "Can't break outside of a loop");
         }
         return null;
@@ -132,6 +133,22 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
             resolve(stmt.value);
         }
 
+        return null;
+    }
+
+    @Override
+    public Void visitSwitchStmt(Stmt.Switch stmt) {
+        resolve(stmt.value);
+
+        Boolean enclosingSwitch = isSwitch;
+        isSwitch = true;
+        for (SwitchCase caseContainer : stmt.cases) {
+            if (caseContainer.value != null) resolve(caseContainer.value);
+            if (caseContainer.statements != null)
+                resolve(caseContainer.statements);
+        }
+        resolve(stmt.defaultCase.statements);
+        isSwitch = enclosingSwitch;
         return null;
     }
 

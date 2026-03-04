@@ -50,6 +50,7 @@ class Parser {
         if (match(DO)) return doStatement();
         if (match(BREAK)) return breakStatement();
         if (match(CONTINUE)) return continueStatement();
+        if (match(SWITCH)) return switchStatement();
 
         return expressionStatement();
     }
@@ -168,6 +169,58 @@ class Parser {
         Token keyword = previous();
         consume(SEMICOLON, "Expect ';' after continue");
         return new Stmt.Continue(keyword);
+    }
+
+    private Stmt switchStatement() {
+        consume(LEFT_PAREN, "Expect '(' after swtich");
+        Expr switchValue = expression();
+        consume(RIGHT_PAREN, "Expect ')' after switch value");
+        consume(LEFT_BRACE, "Expect '{' after switch");
+        
+        List<SwitchCase> cases = new ArrayList<>();
+        SwitchCase defaultCase = null;
+
+        while (!check(RIGHT_BRACE) && !isAtEnd()) {
+            if (match(CASE)) {
+                cases.add(caseStatement());
+            }
+            else if (match(DEFAULT)) {
+                if (defaultCase == null) {
+                    defaultCase = defaultStatement();
+                    cases.add(defaultCase);
+                }
+                else {
+                    throw error(peek(), "Expect one 'default' inside switch");
+                }
+            }
+            else {
+                throw error(peek(), "Expect 'case' or 'default' inside switch");
+            }
+        }
+
+        consume(RIGHT_BRACE, "Expect '}' after switch");
+        return new Stmt.Switch(switchValue, cases, defaultCase);
+    }
+
+    private SwitchCase caseStatement() {
+        Expr value = expression();
+        consume(COLON, "Expect ':' after case");
+
+        List<Stmt> statements = new ArrayList<>();
+        while (!check(CASE) && !check(DEFAULT) && !check(RIGHT_BRACE)) {
+            statements.add(statement());
+        }
+        return new SwitchCase(value, statements);
+    }
+
+    private SwitchCase defaultStatement() {
+        consume(COLON, "Expect ':' after default");
+        
+        List<Stmt> statements = new ArrayList<>();
+        while (!check(CASE) && !check(DEFAULT) && !check(RIGHT_BRACE)) {
+            statements.add(statement());
+        }
+        return new SwitchCase(null, statements);
     }
 
     private Stmt expressionStatement() {
@@ -497,6 +550,11 @@ class Parser {
             case PRINT:
             case RETURN:
             case DO:
+            case BREAK:
+            case CONTINUE:
+            case SWITCH:
+            case CASE:
+            case DEFAULT:
             return;
             default:
             return;

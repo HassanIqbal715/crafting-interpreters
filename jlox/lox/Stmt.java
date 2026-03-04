@@ -15,6 +15,7 @@ abstract class Stmt {
 		R visitIfStmt(If stmt);
 		R visitPrintStmt(Print stmt);
 		R visitReturnStmt(Return stmt);
+		R visitSwitchStmt(Switch stmt);
 		R visitVarStmt(Var stmt);
 		R visitWhileStmt(While stmt);
 		R visitCommaDeclarationStmt(CommaDeclaration stmt);
@@ -181,6 +182,23 @@ abstract class Stmt {
 
 		final Token keyword;
 		final Expr value;
+	}
+
+	static class Switch extends Stmt {
+		Switch(Expr value, List<SwitchCase> cases, SwitchCase defaultCase) {
+			this.value = value;
+			this.cases = cases;
+			this.defaultCase = defaultCase;
+		}
+
+		@Override
+		<R> R accept(Visitor<R> visitor) {
+			return visitor.visitSwitchStmt(this);
+		}
+
+		final Expr value;
+		final List<SwitchCase> cases;
+		final SwitchCase defaultCase;
 	}
 
 	static class Var extends Stmt {

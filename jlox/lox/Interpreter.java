@@ -479,6 +479,41 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     @Override
+    public Void visitSwitchStmt(Stmt.Switch stmt) {
+        Object switchValue = evaluate(stmt.value);
+
+        int startingIndex = -1;
+        int defaultIndex = -1;
+
+        for (int i = 0; i < stmt.cases.size(); i++) {
+            SwitchCase caseContainer = stmt.cases.get(i);
+            
+            if (caseContainer.value == null) {
+                defaultIndex = i;
+            } 
+            else {
+                Object value = evaluate(caseContainer.value);
+                if (isEqual(value, switchValue)) {
+                    startingIndex = i;
+                    break;
+                }
+            }
+        }
+        if (startingIndex == -1) {
+            startingIndex = defaultIndex;
+        }
+
+        if (startingIndex != -1) {
+            try {
+                for (int i = startingIndex; i < stmt.cases.size(); i++) {
+                    executeBlock(stmt.cases.get(i).statements, environment);
+                }
+            } catch (Exceptions.Break exceptionBreak) {}
+        }
+        return null;
+    }
+
+    @Override
     public Void visitVarStmt(Stmt.Var stmt) {
         Object value = null;
         if (stmt.initializer != null) {
