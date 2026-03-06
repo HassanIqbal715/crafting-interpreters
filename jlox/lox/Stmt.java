@@ -6,7 +6,6 @@ abstract class Stmt {
 	interface Visitor<R> {
 		R visitArrStmt(Arr stmt);
 		R visitBlockStmt(Block stmt);
-		R visitClassStmt(Class stmt);
 		R visitBreakStmt(Break stmt);
 		R visitContinueStmt(Continue stmt);
 		R visitDoStmt(Do stmt);
