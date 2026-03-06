@@ -1,5 +1,9 @@
 package lox;
 
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -40,9 +44,10 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
                 Object input = null;
                 if (scanner.hasNextLine()) {
                     input = scanner.nextLine();
+                    return (String) input;
                 }
-
-                return (String) input;
+                
+                return null;
             }
 
             @Override
@@ -60,7 +65,10 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
                     return Double.parseDouble((String) arguments.get(0));
                 }
                 catch (NumberFormatException err) {
-                    return null;
+                    return Double.parseDouble("0");
+                }
+                catch (NullPointerException err) {
+                    return Double.parseDouble("0");
                 }
             }
 
@@ -456,6 +464,44 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         }
         else if (stmt.elseBranch != null) {
             execute(stmt.elseBranch);
+        }
+
+        return null;
+    }
+
+    @Override
+    public Void visitImportStmt(Stmt.Import stmt) {
+        Object filePath = evaluate(stmt.path);
+
+        if (!(filePath instanceof String)) {
+            throw new RuntimeError(stmt.keyword, 
+                    "Path must be a string");
+        }
+        String pathString = (String) filePath;
+
+        try {
+            byte[] bytes = Files.readAllBytes(Paths.get(pathString));
+            String source = new String(bytes, Charset.defaultCharset());
+
+            lox.Scanner scanner = new lox.Scanner(source);
+            List<Token> tokens = scanner.scanTokens();
+
+            Parser parser = new Parser(tokens);
+            List<Stmt> statements = parser.parse();
+            
+            if (Lox.hadError) return null;
+
+            Resolver resolver = new Resolver(this);
+            resolver.resolve(statements);
+
+            if (Lox.hadError) return null;
+            for (Stmt statement : statements) {
+                execute(statement); 
+            }
+        }
+        catch (IOException errorException) {
+            throw new RuntimeError(stmt.keyword,
+                "Could not find or load file '" + pathString + "'");
         }
 
         return null;

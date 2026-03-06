@@ -6,6 +6,7 @@ abstract class Stmt {
 	interface Visitor<R> {
 		R visitArrStmt(Arr stmt);
 		R visitBlockStmt(Block stmt);
+		R visitClassStmt(Class stmt);
 		R visitBreakStmt(Break stmt);
 		R visitContinueStmt(Continue stmt);
 		R visitDoStmt(Do stmt);
@@ -19,6 +20,7 @@ abstract class Stmt {
 		R visitVarStmt(Var stmt);
 		R visitWhileStmt(While stmt);
 		R visitCommaDeclarationStmt(CommaDeclaration stmt);
+		R visitImportStmt(Import stmt);
 	}
 
 	static class Arr extends Stmt {
@@ -242,6 +244,21 @@ abstract class Stmt {
 		}
 
 		final List<Stmt> declarations;
+	}
+
+	static class Import extends Stmt {
+		Import(Token keyword, Expr path) {
+			this.keyword = keyword;
+			this.path = path;
+		}
+
+		@Override
+		<R> R accept(Visitor<R> visitor) {
+			return visitor.visitImportStmt(this);
+		}
+
+		final Token keyword;
+		final Expr path;
 	}
 
 	abstract <R> R accept(Visitor<R> visitor);

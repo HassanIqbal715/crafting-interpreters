@@ -51,7 +51,8 @@ class Parser {
         if (match(BREAK)) return breakStatement();
         if (match(CONTINUE)) return continueStatement();
         if (match(SWITCH)) return switchStatement();
-
+        if (match(IMPORT)) return importStatement();
+        
         return expressionStatement();
     }
 
@@ -102,6 +103,13 @@ class Parser {
             elseBranch = statement();
         }
         return new Stmt.If(condition, thenBranch, elseBranch);
+    }
+
+    private Stmt importStatement() {
+        Token keyword = previous();
+        Expr value = expression();
+        consume(SEMICOLON, "Expect ';' after import value.");
+        return new Stmt.Import(keyword, value);
     }
 
     private Stmt printStatement() {
@@ -424,7 +432,7 @@ class Parser {
                 if (arguments.size() >= 255) {
                     error(peek(), "Can't have more than 255 arguments.");
                 }
-                arguments.add(expression());
+                arguments.add(assignment());
             } while (match(COMMA));
         }
 
