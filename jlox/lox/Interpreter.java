@@ -192,27 +192,24 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
     private void checkNumberOperand(Token operator, Object operand) {
         if (operand instanceof Double) return;
-        throw new RuntimeError(operator, "Operand must be a number.", 
-            fileName);
+        throw new RuntimeError(operator, "Operand must be a number.");
     }
 
     private void checkNumberOperands(Token operator, 
                                     Object left, Object right) {
         if (left instanceof Double && right instanceof Double) return;
-        throw new RuntimeError(operator, "Operands must be numbers", 
-            fileName);
+        throw new RuntimeError(operator, "Operands must be numbers");
     }
 
     private void checkVariableOperand(Token operator, Object operand) {
         if (operand instanceof Expr.Variable) return;
-        throw new RuntimeError(operator, "Operand must be a variable", 
-            fileName);
+        throw new RuntimeError(operator, "Operand must be a variable");
     }
 
     private void checkTernaryOperand(Token operator, Object left) {
         if (left instanceof Boolean) return;
         throw new RuntimeError(operator, "Left operand must be a condition"
-            , fileName);
+            );
     }
     
     private boolean isTruthy(Object object) {
@@ -288,13 +285,13 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
                 }
 
                 throw new RuntimeError(expr.operator,
-                    "Operands must be numbers or strings", fileName);
+                    "Operands must be numbers or strings");
             case SLASH:
                 checkNumberOperands(expr.operator, left, right);
                 
                 if ((double)right == 0.0) {
                     throw new RuntimeError(expr.operator, 
-                            "Cannot divide by 0", fileName);
+                            "Cannot divide by 0");
                 }
 
                 return (double)left / (double)right;
@@ -306,7 +303,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
                 
                 if ((double) right == 0.0) {
                     throw new RuntimeError(expr.operator, 
-                            "Cannot divide by 0", fileName);
+                            "Cannot divide by 0");
                 }
 
                 return (double)left % (double)right;
@@ -333,7 +330,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         LoxCallable function = (LoxCallable)callee;
         if (function.arity() != arguments.size()) {
             throw new RuntimeError(expr.paren, "Expected " + function.arity() +
-                " arguments but got " + arguments.size() + ".", fileName);
+                " arguments but got " + arguments.size() + ".");
         }
 
         return function.call(this, arguments);
@@ -526,7 +523,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
             byte[] bytes = Files.readAllBytes(Paths.get(pathString));
             String source = new String(bytes, Charset.defaultCharset());
 
-            lox.Scanner scanner = new lox.Scanner(source);
+            lox.Scanner scanner = new lox.Scanner(source, fileName);
             List<Token> tokens = scanner.scanTokens();
 
             Parser parser = new Parser(tokens);
@@ -534,8 +531,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
             List<Stmt> statements = parser.parse();
             
             if (Lox.hadError) {
-                throw new RuntimeError(stmt.keyword, "Parse error!", 
-                    fileName);
+                throw new RuntimeError(stmt.keyword, "Parse error!");
             }
 
             Resolver resolver = new Resolver(this);
@@ -543,8 +539,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
             resolver.resolve(statements);
 
             if (Lox.hadError) {
-                throw new RuntimeError(stmt.keyword, "Resolution error!",
-                    fileName);
+                throw new RuntimeError(stmt.keyword, "Resolution error!");
             };
             for (Stmt statement : statements) {
                 execute(statement); 
@@ -559,7 +554,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
             Lox.basePath = basePath;
             fileName = "";
             throw new RuntimeError(stmt.keyword,
-                "Could not find or load file '" + pathString + "'", fileName);
+                "Could not find or load file '" + pathString + "'");
         }
         return null;
     }

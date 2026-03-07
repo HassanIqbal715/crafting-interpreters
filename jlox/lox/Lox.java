@@ -59,7 +59,7 @@ public class Lox {
 
     private static void run(String source) {
         // Provide the code to scanner to read from. Our own scanner
-        Scanner scanner = new Scanner(source);
+        Scanner scanner = new Scanner(source, mainPath);
 
         // Get tokenize and store the tokens in a list
         List<Token> tokens = scanner.scanTokens();

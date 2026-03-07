@@ -12,6 +12,7 @@ class Scanner {
     private int start = 0;
     private int current = 0;
     private int line = 1;
+    private String fileName = "";
 
     private static final Map<String, TokenType> keywords;
 
@@ -42,8 +43,9 @@ class Scanner {
         keywords.put("import",   IMPORT);
     }
 
-    Scanner(String source) {
+    Scanner(String source, String sourceFile) {
         this.source = source;
+        this.fileName = sourceFile;
     }
 
     List<Token> scanTokens() {
@@ -54,7 +56,7 @@ class Scanner {
         }
 
         // end of the line
-        tokens.add(new Token(EOF, "", null, line));
+        tokens.add(new Token(EOF, "", null, line, fileName));
         return tokens;
     }
 
@@ -250,6 +252,6 @@ class Scanner {
 
     private void addToken(TokenType type, Object literal) {
         String text = source.substring(start, current);
-        tokens.add(new Token(type, text, literal, line));
+        tokens.add(new Token(type, text, literal, line, fileName));
     }
 }
