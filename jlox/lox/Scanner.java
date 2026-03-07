@@ -39,6 +39,7 @@ class Scanner {
         keywords.put("switch",   SWITCH);
         keywords.put("case",     CASE);
         keywords.put("default",  DEFAULT);
+        keywords.put("import",   IMPORT);
     }
 
     Scanner(String source) {
