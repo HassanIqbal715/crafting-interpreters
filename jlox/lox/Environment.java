@@ -7,20 +7,24 @@ import java.util.List;
 class Environment {
     final Environment enclosing;
     private final Map<String, Object> values = new HashMap<>();
+    final Interpreter interpreter;
 
-    Environment() {
+    Environment(Interpreter interpreter) {
         enclosing = null;
+        this.interpreter = interpreter;
     }
 
-    Environment(Environment enclosing) {
+    Environment(Environment enclosing, Interpreter interpreter) {
         this.enclosing = enclosing;
+        this.interpreter = interpreter;
     }
 
     Object get(Token name) {
         if (values.containsKey(name.lexeme)) {
             if (values.get(name.lexeme) == null) 
                 throw new RuntimeError(name, 
-                    "Uninitialized variable '"  + name.lexeme + "'.");
+                    "Uninitialized variable '"  + name.lexeme + "'.", 
+                    interpreter.fileName);
 
             return values.get(name.lexeme);
         }
@@ -28,7 +32,7 @@ class Environment {
         if (enclosing != null) return enclosing.get(name);
 
         throw new RuntimeError(name, 
-            "Undefined variable '" + name.lexeme + "'.");
+            "Undefined variable '" + name.lexeme + "'.", interpreter.fileName);
     }
     
     Object getArray(Token name, List<Integer> indices) {
@@ -37,17 +41,20 @@ class Environment {
 
             if (value == null) 
                 throw new RuntimeError(name, 
-                    "Uninitialized array '"  + name.lexeme + "'.");
+                    "Uninitialized array '"  + name.lexeme + "'.", 
+                    interpreter.fileName);
             if (!(value instanceof List)) {
                 throw new RuntimeError(name, 
-                    "'" + name.lexeme + "' is not an array");
+                    "'" + name.lexeme + "' is not an array", 
+                    interpreter.fileName);
             }
             return getArrayValue(name, value, indices, 0);
         }
 
         if (enclosing != null) return enclosing.getArray(name, indices);
 
-        throw new RuntimeError(name, "Undefined array '" + name.lexeme + "'.");
+        throw new RuntimeError(name, "Undefined array '" + name.lexeme + "'.", 
+            interpreter.fileName);
     }
 
     Object getArrayValue(Token name, Object elements, List<Integer> indices, 
@@ -56,7 +63,8 @@ class Environment {
 
         if (index < 0 || index >= ((List<?>)elements).size()) {
             throw new RuntimeError(name, 
-                "Index " + index + " is out of bounds of array '");
+                "Index " + index + " is out of bounds of array '", 
+                interpreter.fileName);
         }
 
         if (i >= indices.size() - 1) {
@@ -80,7 +88,7 @@ class Environment {
         }
 
         throw new RuntimeError(name,
-            "Undefined variable'" + name.lexeme + "'.");
+            "Undefined variable'" + name.lexeme + "'.", interpreter.fileName);
     }
 
     @SuppressWarnings("unchecked")
@@ -97,7 +105,8 @@ class Environment {
             return;
         }
         
-        throw new RuntimeError(name, "Undefined array '" + name.lexeme + "'.");
+        throw new RuntimeError(name, "Undefined array '" + name.lexeme + "'.", 
+            interpreter.fileName);
     }
 
     @SuppressWarnings("unchecked")
@@ -107,7 +116,8 @@ class Environment {
         int index = indices.get(i);
         if (index < 0 || index >= ((List<Object>)elements).size()) {
             throw new RuntimeError(name, 
-                "Index " + index + " is out of bounds of array '");
+                "Index " + index + " is out of bounds of array '", 
+                interpreter.fileName);
         }
 
         if (i >= indices.size() - 1) {
@@ -122,7 +132,8 @@ class Environment {
 
     void checkList(Token name, Object list) {
         if (list instanceof List) return;
-        throw new RuntimeError(name, "Expect type elements.");
+        throw new RuntimeError(name, "Expect type elements.", 
+            interpreter.fileName);
     }
 
     void define(String name, Object value) {
