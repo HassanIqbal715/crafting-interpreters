@@ -45,7 +45,8 @@ public class GenerateAst {
             "Switch : Expr value, List<SwitchCase> cases, SwitchCase defaultCase",
             "Var : Token name, Expr initializer",
             "While : Expr condition, Stmt body",
-            "CommaDeclaration : List<Stmt> declarations"
+            "CommaDeclaration : List<Stmt> declarations",
+            "Import : Token keyword, Expr path"
         ));
     }
 

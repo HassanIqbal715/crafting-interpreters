@@ -6,7 +6,7 @@ import static lox.TokenType.*;
 
 class Parser {
     private static class ParseError extends RuntimeException {}
-
+    String currentFile = "";
     private final List<Token> tokens;
     private int current = 0;
     
@@ -66,7 +66,8 @@ class Parser {
         if (match(BREAK)) return breakStatement();
         if (match(CONTINUE)) return continueStatement();
         if (match(SWITCH)) return switchStatement();
-
+        if (match(IMPORT)) return importStatement();
+        
         return expressionStatement();
     }
 
@@ -117,6 +118,13 @@ class Parser {
             elseBranch = statement();
         }
         return new Stmt.If(condition, thenBranch, elseBranch);
+    }
+
+    private Stmt importStatement() {
+        Token keyword = previous();
+        Expr value = expression();
+        consume(SEMICOLON, "Expect ';' after import value.");
+        return new Stmt.Import(keyword, value);
     }
 
     private Stmt printStatement() {
@@ -205,11 +213,13 @@ class Parser {
                     cases.add(defaultCase);
                 }
                 else {
-                    throw error(peek(), "Expect one 'default' inside switch");
+                    throw error(peek(), "Expect one 'default' inside switch", 
+                        currentFile);
                 }
             }
             else {
-                throw error(peek(), "Expect 'case' or 'default' inside switch");
+                throw error(peek(), "Expect 'case' or 'default' inside switch", 
+                    currentFile);
             }
         }
 
@@ -252,7 +262,8 @@ class Parser {
         if (!check(RIGHT_PAREN)) {
             do {
                 if (parameters.size() >= 255) {
-                    error(peek(), "Can't have more than 255 parameters.");
+                    error(peek(), "Can't have more than 255 parameters.", 
+                        currentFile);
                 }
                 parameters.add(
                     consume(IDENTIFIER, "Expect parameter name.")
@@ -310,7 +321,7 @@ class Parser {
                 return new Expr.AssignArray(name, indices, value);
             }
 
-            error(equals, "Invalid assignment target.");
+            error(equals, "Invalid assignment target.", currentFile);
         }
 
         return expr;
@@ -328,7 +339,7 @@ class Parser {
                 operator2 = previous();
             }
             else {
-                throw error(peek(), "Expect colon ':''.");
+                throw error(peek(), "Expect colon ':''.", currentFile);
             }
 
             Expr right = ternary();
@@ -437,9 +448,10 @@ class Parser {
         if (!check(RIGHT_PAREN)) {
             do {
                 if (arguments.size() >= 255) {
-                    error(peek(), "Can't have more than 255 arguments.");
+                    error(peek(), "Can't have more than 255 arguments.", 
+                        currentFile);
                 }
-                arguments.add(expression());
+                arguments.add(assignment());
             } while (match(COMMA));
         }
 
@@ -507,7 +519,7 @@ class Parser {
             return new Expr.Elements(elements);
         }
 
-        throw error(peek(), "Expect expression.");
+        throw error(peek(), "Expect expression.", currentFile);
     }
 
     private boolean match(TokenType ...types) {
@@ -524,7 +536,7 @@ class Parser {
     private Token consume(TokenType type, String message) {
         if (check(type)) return advance();
 
-        throw error(peek(), message);
+        throw error(peek(), message, currentFile);
     }
     
     private boolean check(TokenType type) {
@@ -549,8 +561,8 @@ class Parser {
         return tokens.get(current - 1);
     }
     
-    private ParseError error(Token token, String message) {
-        Lox.error(token, message);
+    private ParseError error(Token token, String message, String fileName) {
+        Lox.error(token, message, fileName);
         return new ParseError();
     } 
 

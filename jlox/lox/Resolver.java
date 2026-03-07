@@ -8,6 +8,7 @@ import java.util.Stack;
 class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     private final Interpreter interpreter;
     private final Stack<Map<String, Boolean>> scopes = new Stack<>();
+    String currentFile = "";
     private FunctionType currentFunction = FunctionType.NONE;
     private Boolean isLoop = false;
     private Boolean isSwitch = false;
@@ -48,7 +49,8 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     @Override
     public Void visitBreakStmt(Stmt.Break stmt) {
         if (!isLoop && !isSwitch) {
-            Lox.error(stmt.keyword, "Can't break outside of a loop");
+            Lox.error(stmt.keyword, "Can't break outside of a loop", 
+                currentFile);
         }
         return null;
     }
@@ -63,7 +65,8 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     @Override
     public Void visitContinueStmt(Stmt.Continue stmt) {
         if (!isLoop) {
-            Lox.error(stmt.keyword, "Can't continue outside of a loop");
+            Lox.error(stmt.keyword, "Can't continue outside of a loop", 
+                currentFile);
         }
         return null;
     }
@@ -126,6 +129,15 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     }
 
     @Override
+    public Void visitImportStmt(Stmt.Import stmt) {
+        if (scopes.size() > 0) {
+            Lox.error(stmt.keyword, 
+                    "Can't import to a local scope", currentFile);
+        }
+        return null;
+    }
+
+    @Override
     public Void visitPrintStmt(Stmt.Print stmt) {
         resolve(stmt.expression);
         return null;
@@ -134,7 +146,8 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     @Override
     public Void visitReturnStmt(Stmt.Return stmt) {
         if (currentFunction == FunctionType.NONE) {
-            Lox.error(stmt.keyword, "Can't return from top-level code");
+            Lox.error(stmt.keyword, "Can't return from top-level code", 
+                currentFile);
         }
         if (stmt.value != null) {
             resolve(stmt.value);
@@ -279,7 +292,8 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
         if (!scopes.isEmpty() &&
             scopes.peek().get(expr.name.lexeme) == Boolean.FALSE) {
             Lox.error(expr.name,
-                "Can't read local variable in its own initializer.");
+                "Can't read local variable in its own initializer.", 
+                currentFile);
         }
 
         resolveLocal(expr, expr.name);
@@ -308,7 +322,8 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
         Map<String, Boolean> scope = scopes.peek();
         if (scope.containsKey(name.lexeme)) {
             Lox.error(name,
-                "Already a variable with this name in this scope.");
+                "Already a variable with this name in this scope.", 
+                currentFile);
         }
 
         scope.put(name.lexeme, false);

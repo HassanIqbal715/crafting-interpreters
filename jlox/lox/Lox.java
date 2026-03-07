@@ -12,6 +12,8 @@ public class Lox {
     private static final Interpreter interpreter = new Interpreter();
     static boolean hadError = false;
     static boolean hadRuntimeError = false;
+    static String basePath = "";
+    static private String mainPath = ".";
 
     public static void main(String[] args) throws IOException {
         if (args.length > 1) { // Error
@@ -30,6 +32,8 @@ public class Lox {
         *  Open the file and read everything inside using Files
         *  Store the result in a byte array.
         */
+        mainPath = path;
+        basePath = path.substring(0, path.lastIndexOf("/")) + "/";
         byte[] bytes = Files.readAllBytes(Paths.get(path));
         run(new String(bytes, Charset.defaultCharset()));
 
@@ -77,6 +81,7 @@ public class Lox {
 
         if (hadError) return;
         
+        interpreter.importedFiles.put(mainPath, true);
         interpreter.interpret(statements);
     }
 
@@ -86,17 +91,28 @@ public class Lox {
 
     private static void report(int line, String where, String message) {
         System.err.println(
-            "[line " + line + "] Error" + where + ": " + message
+            "[line " + line + "] Error " + where + ": " + message
         );
         hadError = true;
     }  
     
-    static void error(Token token, String message) {
+    static void error(Token token, String message, String fileName) {
         if (token.type == TokenType.EOF) {
-            report(token.line, " at end", message);
-        } 
+            if (fileName != "" && fileName != null) {
+                report(token.line, "in '" + fileName + "' at end", 
+                    message);
+            }
+            else {
+                report(token.line, "at end", message);
+            }
+        }
         else {
-            report(token.line, " at '" + token.lexeme + "'", message);
+            if (fileName != "" && fileName != null) {
+                report(token.line, "in '" + fileName + "' at", message);
+            }
+            else {
+                report(token.line, "at '" + token.lexeme + "'", message);
+            }
         }
     }
 

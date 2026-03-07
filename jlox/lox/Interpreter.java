@@ -1,5 +1,9 @@
 package lox;
 
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -7,9 +11,11 @@ import java.util.Map;
 import java.util.Scanner;
 
 class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
-    final Environment globals = new Environment();
+    final Environment globals = new Environment(this);
+    String fileName = "";
     private Environment environment = globals;
     private final Map<Expr, Integer> locals = new HashMap<>();
+    public final Map<String, Boolean> importedFiles = new HashMap<>();
 
     Interpreter() {
         // A native function being defined in the global scope
@@ -40,9 +46,10 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
                 Object input = null;
                 if (scanner.hasNextLine()) {
                     input = scanner.nextLine();
+                    return (String) input;
                 }
-
-                return (String) input;
+                
+                return null;
             }
 
             @Override
@@ -60,7 +67,10 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
                     return Double.parseDouble((String) arguments.get(0));
                 }
                 catch (NumberFormatException err) {
-                    return null;
+                    return Double.parseDouble("0");
+                }
+                catch (NullPointerException err) {
+                    return Double.parseDouble("0");
                 }
             }
 
@@ -182,23 +192,27 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
     private void checkNumberOperand(Token operator, Object operand) {
         if (operand instanceof Double) return;
-        throw new RuntimeError(operator, "Operand must be a number.");
+        throw new RuntimeError(operator, "Operand must be a number.", 
+            fileName);
     }
 
     private void checkNumberOperands(Token operator, 
                                     Object left, Object right) {
         if (left instanceof Double && right instanceof Double) return;
-        throw new RuntimeError(operator, "Operands must be numbers");
+        throw new RuntimeError(operator, "Operands must be numbers", 
+            fileName);
     }
 
     private void checkVariableOperand(Token operator, Object operand) {
         if (operand instanceof Expr.Variable) return;
-        throw new RuntimeError(operator, "Operand must be a variable");
+        throw new RuntimeError(operator, "Operand must be a variable", 
+            fileName);
     }
 
     private void checkTernaryOperand(Token operator, Object left) {
         if (left instanceof Boolean) return;
-        throw new RuntimeError(operator, "Left operand must be a condition");
+        throw new RuntimeError(operator, "Left operand must be a condition"
+            , fileName);
     }
     
     private boolean isTruthy(Object object) {
@@ -274,13 +288,13 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
                 }
 
                 throw new RuntimeError(expr.operator,
-                    "Operands must be numbers or strings");
+                    "Operands must be numbers or strings", fileName);
             case SLASH:
                 checkNumberOperands(expr.operator, left, right);
                 
                 if ((double)right == 0.0) {
                     throw new RuntimeError(expr.operator, 
-                            "Cannot divide by 0");
+                            "Cannot divide by 0", fileName);
                 }
 
                 return (double)left / (double)right;
@@ -292,7 +306,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
                 
                 if ((double) right == 0.0) {
                     throw new RuntimeError(expr.operator, 
-                            "Cannot divide by 0");
+                            "Cannot divide by 0", fileName);
                 }
 
                 return (double)left % (double)right;
@@ -319,7 +333,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         LoxCallable function = (LoxCallable)callee;
         if (function.arity() != arguments.size()) {
             throw new RuntimeError(expr.paren, "Expected " + function.arity() +
-                " arguments but got " + arguments.size() + ".");
+                " arguments but got " + arguments.size() + ".", fileName);
         }
 
         return function.call(this, arguments);
@@ -401,7 +415,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
     @Override
     public Void visitBlockStmt(Stmt.Block stmt) {
-        executeBlock(stmt.statements, new Environment(environment));
+        executeBlock(stmt.statements, new Environment(environment, this));
         return null;
     }
 
@@ -477,6 +491,76 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
             execute(stmt.elseBranch);
         }
 
+        return null;
+    }
+
+    @Override
+    public Void visitImportStmt(Stmt.Import stmt) {
+        Object filePath = evaluate(stmt.path);
+
+        if (!(filePath instanceof String)) {
+            return null;
+        }
+
+        String basePath = Lox.basePath;
+        String pathString = Paths.get(Lox.basePath + (String) filePath).
+            normalize().toString();
+
+        // handle circular imports
+        if (importedFiles.containsKey(pathString)) {
+            return null;
+        }
+        else {
+            importedFiles.put(pathString, true);
+        }
+
+        int index = ((String) filePath).lastIndexOf("/");
+        fileName = (String) filePath;
+        if (index > 0) {
+            Lox.basePath = Lox.basePath + ((String) filePath).substring(0, 
+                index) + "/";
+            fileName = ((String) filePath).substring(index + 1);
+        }
+
+        try {
+            byte[] bytes = Files.readAllBytes(Paths.get(pathString));
+            String source = new String(bytes, Charset.defaultCharset());
+
+            lox.Scanner scanner = new lox.Scanner(source);
+            List<Token> tokens = scanner.scanTokens();
+
+            Parser parser = new Parser(tokens);
+            parser.currentFile = fileName;
+            List<Stmt> statements = parser.parse();
+            
+            if (Lox.hadError) {
+                throw new RuntimeError(stmt.keyword, "Parse error!", 
+                    fileName);
+            }
+
+            Resolver resolver = new Resolver(this);
+            resolver.currentFile = fileName;
+            resolver.resolve(statements);
+
+            if (Lox.hadError) {
+                throw new RuntimeError(stmt.keyword, "Resolution error!",
+                    fileName);
+            };
+            for (Stmt statement : statements) {
+                execute(statement); 
+            }
+
+            // reset the path
+            Lox.basePath = basePath;
+            fileName = "";
+        }
+        catch (IOException errorException) {
+            // reset the path
+            Lox.basePath = basePath;
+            fileName = "";
+            throw new RuntimeError(stmt.keyword,
+                "Could not find or load file '" + pathString + "'", fileName);
+        }
         return null;
     }
 
