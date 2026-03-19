@@ -4,7 +4,7 @@
 #include <fstream>
 #include <string_view>
 
-std::string_view Files::ReadAllBytes(std::string path) {
+std::string Files::ReadAllBytes(std::string &path) {
     std::filesystem::path filePath = path;
 
     if (!std::filesystem::exists(filePath)) {
@@ -21,14 +21,14 @@ std::string_view Files::ReadAllBytes(std::string path) {
         return "";
     }
 
-    file.seekp(0, std::ios_base::beg);
+    file.seekg(0, std::ios_base::beg);
 
     std::string data;
     std::string line;
 
     while(std::getline(file, line)) {
         data.append(line);
-        data.append("\n");
+        data.push_back('\n');
     }
 
     if (file.is_open())

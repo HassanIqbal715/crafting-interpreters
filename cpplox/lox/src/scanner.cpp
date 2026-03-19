@@ -65,7 +65,10 @@ void Scanner::scanToken() {
             if (match('/')) {
                 // A comment goes until the end of the line.
                 while (peek() != '\n' && !isAtEnd()) advance();
-            } 
+            }
+            else if (match('*')) {
+                multilineComment();
+            }
             else {
                 addToken(SLASH);
             }
@@ -109,6 +112,25 @@ void Scanner::identifier() {
         type = IDENTIFIER;
     }
     addToken(type);
+}
+
+void Scanner::multilineComment() {
+    while(!isAtEnd()) {
+        if (peek() == '/' && peekNext() == '*') {
+            advance();
+            advance();
+            multilineComment();
+        }
+        if (peek() == '*' && peekNext() == '/') {
+            advance();
+            advance();
+            return;
+        }
+        if (peek() == '\n') line++;
+        advance();
+    }
+
+    Lox::error(line, "Unterminated comment.");
 }
 
 void Scanner::number() {

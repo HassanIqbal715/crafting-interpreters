@@ -17,6 +17,7 @@ private:
 
     void scanToken();
     void identifier();
+    void multilineComment();
     void number();
     void string();
     bool match(char expected);

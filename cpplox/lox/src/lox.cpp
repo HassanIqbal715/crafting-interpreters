@@ -8,9 +8,8 @@
 #include <vector>
 
 void Lox::runFile(std::string path) {
-    std::string_view data = Files::ReadAllBytes(path);
+    std::string data = Files::ReadAllBytes(path);
     run(data);
-    
     if (hadError) exit(65);
 }
 
