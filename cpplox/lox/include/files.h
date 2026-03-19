@@ -1,6 +1,5 @@
-#include <iostream>
-using namespace std;
+#include <string>
 
 namespace Files {
-    string_view ReadAllBytes(string path);
+    std::string_view ReadAllBytes(std::string path);
 }

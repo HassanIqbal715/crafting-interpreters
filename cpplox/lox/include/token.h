@@ -2,22 +2,21 @@
 #include "token_type.h"
 #include <iostream>
 #include <variant>
-using namespace std;
 
 struct LiteralToString{
-    string operator()(double val);
-    string operator()(string val);
-    string operator()(monostate val);
+    std::string operator()(double val);
+    std::string operator()(std::string val);
+    std::string operator()(std::monostate val);
 };
 
 struct Token {
     const TokenType type;
-    const string lexeme;
-    const variant<double, string, monostate> literal;
+    const std::string lexeme;
+    const std::variant<double, std::string, std::monostate> literal;
     const int line;
 
-    Token(TokenType type, string lexeme, 
-        variant<double, string, monostate> literal, int line);
+    Token(TokenType type, std::string lexeme, 
+        std::variant<double, std::string, std::monostate> literal, int line);
 };
 
-ostream &operator<<(ostream &cout, const Token &token);
+std::ostream &operator<<(std::ostream &cout, const Token &token);

@@ -1,26 +1,26 @@
 #include "token.h"
 
 // The visitor struct
-string LiteralToString::operator()(double val) {
-    return to_string(val);
+std::string LiteralToString::operator()(double val) {
+    return std::to_string(val);
 }
 
-string LiteralToString::operator()(string val) {
+std::string LiteralToString::operator()(std::string val) {
     return val;
 }
 
-string LiteralToString::operator()(monostate val) {
+std::string LiteralToString::operator()(std::monostate val) {
     return "nil";
 }
 
 // Type class
-Token::Token(TokenType type, string lexeme,
-        variant<double, string, monostate> literal, int line) : 
+Token::Token(TokenType type, std::string lexeme,
+        std::variant<double, std::string, std::monostate> literal, int line) :
     type{type}, lexeme{lexeme}, literal{literal}, line{line}{}
 
 
 // Printing token
-string TokenTypeToString(TokenType type) {
+std::string TokenTypeToString(TokenType type) {
     switch(type) {
         case LEFT_PAREN: return "LEFT_PAREN";
         case RIGHT_PAREN: return "RIGHT_PAREN";
@@ -66,7 +66,7 @@ string TokenTypeToString(TokenType type) {
     }
 }
 
-ostream &operator<<(ostream &cout, const Token &type) {
+std::ostream &operator<<(std::ostream &cout, const Token &type) {
     cout << TokenTypeToString(type.type) << " " << type.lexeme << " " <<
         visit(LiteralToString{}, type.literal);
     return cout;

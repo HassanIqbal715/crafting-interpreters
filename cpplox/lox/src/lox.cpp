@@ -6,8 +6,8 @@
 #include <string_view>
 #include <list>
 
-void Lox::runFile(string path) {
-    string_view data = Files::ReadAllBytes(path);
+void Lox::runFile(std::string path) {
+    std::string_view data = Files::ReadAllBytes(path);
     run(data);
     
     if (hadError) exit(65);
@@ -15,14 +15,14 @@ void Lox::runFile(string path) {
 
 void Lox::runPrompt() {
     while(true) {
-        cout << "> ";
-        string line = "";
-        getline(cin, line);
-        cout << line << endl;
+        std::cout << "> ";
+        std::string line = "";
+        std::getline(std::cin, line);
+        std::cout << line << std::endl;
     }
 }
 
-void Lox::run(string_view source) {
+void Lox::run(std::string_view source) {
     // Scanner scanner = new Scanner(source);
     // list<Token> tokens = scanner.scanTokens();
 
@@ -32,18 +32,19 @@ void Lox::run(string_view source) {
 
     Token number{TokenType::NUMBER, "23", 23.0, 1};
     Token text{TokenType::STRING, "this is cool", "this is cool", 2};
-    Token nil{TokenType::NIL, "nil", monostate{}, 3};
+    Token nil{TokenType::NIL, "nil", std::monostate{}, 3};
 
-    cout << number << endl;
-    cout << text << endl;
-    cout << nil << endl;
+    std::cout << number << std::endl;
+    std::cout << text << std::endl;
+    std::cout << nil << std::endl;
 }
 
-void Lox::error(int line, string message) {
+void Lox::error(int line, std::string message) {
     report(line, "", message);
 }
 
-void Lox::report(int line, string where, string message) {
-    cerr << "[line " << line << "] Error" << where << ": " + message << endl;
+void Lox::report(int line, std::string where, std::string message) {
+    std::cerr << "[line " << line << "] Error" << where << ": " 
+              << message << std::endl;
     hadError = true;
 }
