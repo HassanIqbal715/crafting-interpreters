@@ -1,4 +1,5 @@
 #include "files.h"
+#include <iostream>
 #include <filesystem>
 #include <fstream>
 #include <string_view>

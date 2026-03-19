@@ -2,9 +2,10 @@
 #include "files.h"
 #include "token.h"
 #include "token_type.h"
+#include "scanner.h"
 #include <filesystem>
 #include <string_view>
-#include <list>
+#include <vector>
 
 void Lox::runFile(std::string path) {
     std::string_view data = Files::ReadAllBytes(path);
@@ -18,25 +19,17 @@ void Lox::runPrompt() {
         std::cout << "> ";
         std::string line = "";
         std::getline(std::cin, line);
-        std::cout << line << std::endl;
+        run(line);
     }
 }
 
 void Lox::run(std::string_view source) {
-    // Scanner scanner = new Scanner(source);
-    // list<Token> tokens = scanner.scanTokens();
+    Scanner scanner(source);
+    std::vector<std::unique_ptr<Token>> tokens = scanner.scanTokens();
 
-    // for (Token token : tokens) {
-    //     cout << token << "\n";
-    // }
-
-    Token number{TokenType::NUMBER, "23", 23.0, 1};
-    Token text{TokenType::STRING, "this is cool", "this is cool", 2};
-    Token nil{TokenType::NIL, "nil", std::monostate{}, 3};
-
-    std::cout << number << std::endl;
-    std::cout << text << std::endl;
-    std::cout << nil << std::endl;
+    for (int i = 0; i < tokens.size(); i++) {
+        std::cout << *(tokens[i].get()) << std::endl;
+    }
 }
 
 void Lox::error(int line, std::string message) {

@@ -2,6 +2,7 @@
 #include "token_type.h"
 #include <iostream>
 #include <variant>
+using Object = std::variant<double, std::string, std::monostate>;
 
 struct LiteralToString{
     std::string operator()(double val);
@@ -12,11 +13,10 @@ struct LiteralToString{
 struct Token {
     const TokenType type;
     const std::string lexeme;
-    const std::variant<double, std::string, std::monostate> literal;
+    const Object literal;
     const int line;
 
-    Token(TokenType type, std::string lexeme, 
-        std::variant<double, std::string, std::monostate> literal, int line);
+    Token(TokenType type, std::string lexeme, Object literal, int line);
 };
 
 std::ostream &operator<<(std::ostream &cout, const Token &token);
