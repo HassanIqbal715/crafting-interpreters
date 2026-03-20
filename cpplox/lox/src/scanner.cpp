@@ -26,14 +26,14 @@ Scanner::Scanner(std::string_view source) : source{source} {
     line = 1;
 }
 
-std::vector<std::unique_ptr<Token>> Scanner::scanTokens() {
+std::vector<Token> Scanner::scanTokens() {
     while(!isAtEnd()) {
         start = current;
         scanToken();
     }
 
-    tokens.push_back(std::make_unique<Token>(EOFILE, "", std::monostate{}, line));
-    return std::move(tokens);
+    tokens.emplace_back(EOFILE, "", std::monostate{}, line);
+    return tokens;
 }
 
 void Scanner::scanToken() {
@@ -211,5 +211,5 @@ void Scanner::addToken(TokenType type) {
 
 void Scanner::addToken(TokenType type, Object literal) {
     std::string text = (std::string) source.substr(start, current - start);
-    tokens.push_back(std::make_unique<Token>(type, text, literal, line));
+    tokens.emplace_back(type, text, literal, line);
 }

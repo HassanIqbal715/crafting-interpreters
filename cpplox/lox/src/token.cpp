@@ -13,10 +13,13 @@ std::string LiteralToString::operator()(std::monostate val) {
     return "nil";
 }
 
-// Type class
-Token::Token(TokenType type, std::string lexeme, Object literal, int line) :
-    type{type}, lexeme{lexeme}, literal{literal}, line{line}{}
-
+// Default constructor
+Token::Token(TokenType type, std::string lexeme, Object literal, int line) {
+    this->type = type;
+    this->lexeme = lexeme;
+    this->literal = literal;
+    this->line = line;
+}
 
 // Printing token
 std::string TokenTypeToString(TokenType type) {

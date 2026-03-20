@@ -2,6 +2,7 @@
 #include "token_type.h"
 #include <iostream>
 #include <variant>
+#include <iomanip>
 using Object = std::variant<double, std::string, std::monostate>;
 
 struct LiteralToString{
@@ -11,10 +12,10 @@ struct LiteralToString{
 };
 
 struct Token {
-    const TokenType type;
-    const std::string lexeme;
-    const Object literal;
-    const int line;
+    TokenType type;
+    std::string lexeme;
+    Object literal;
+    int line;
 
     Token(TokenType type, std::string lexeme, Object literal, int line);
 };

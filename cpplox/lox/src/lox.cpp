@@ -3,6 +3,8 @@
 #include "token.h"
 #include "token_type.h"
 #include "scanner.h"
+#include "ast_printer.h"
+#include "expr.h"
 #include <filesystem>
 #include <string_view>
 #include <vector>
@@ -24,11 +26,25 @@ void Lox::runPrompt() {
 
 void Lox::run(std::string_view source) {
     Scanner scanner(source);
-    std::vector<std::unique_ptr<Token>> tokens = scanner.scanTokens();
+    std::vector<Token> tokens = scanner.scanTokens();
 
     for (int i = 0; i < tokens.size(); i++) {
-        std::cout << *(tokens[i].get()) << std::endl;
+        std::cout << tokens[i] << std::endl;
     }
+
+    // Expr expression = Binary{
+    //     std::make_unique<Expr>(Unary{
+    //         Token(MINUS, "-", std::monostate{}, 1), 
+    //         std::make_unique<Expr>(Literal{123.0})
+    //     }),
+    //     Token(STAR, "*", std::monostate{}, 1),
+    //     std::make_unique<Expr>(Grouping{
+    //         std::make_unique<Expr>(Literal{45.67})
+    //     })
+    // };
+
+    // AstPrinter printer;
+    // std::cout << std::visit(printer, expression);
 }
 
 void Lox::error(int line, std::string message) {

@@ -10,7 +10,7 @@ class Scanner {
 private:
     static std::unordered_map<std::string, TokenType> keywords;
     const std::string_view source;
-    std::vector<std::unique_ptr<Token>> tokens;
+    std::vector<Token> tokens;
     int start;
     int current;
     int line;
@@ -34,5 +34,5 @@ private:
 public:
     Scanner(std::string_view source);
 
-    std::vector<std::unique_ptr<Token>> scanTokens();
+    std::vector<Token> scanTokens();
 };
