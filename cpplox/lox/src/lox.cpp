@@ -19,7 +19,10 @@ void Lox::runPrompt() {
     while(true) {
         std::cout << "> ";
         std::string line = "";
-        std::getline(std::cin, line);
+        if (!std::getline(std::cin, line)) {
+            std::cout << '\n';
+            return;
+        }
         run(line);
     }
 }
@@ -44,7 +47,7 @@ void Lox::run(std::string_view source) {
     // };
 
     // AstPrinter printer;
-    // std::cout << std::visit(printer, expression);
+    // std::cout << std::visit(printer, expression) << std::endl;
 }
 
 void Lox::error(int line, std::string message) {

@@ -69,7 +69,14 @@ std::string TokenTypeToString(TokenType type) {
 }
 
 std::ostream &operator<<(std::ostream &cout, const Token &type) {
-    cout << TokenTypeToString(type.type) << " " << type.lexeme << " " <<
+    std::string lexeme;
+    if (type.lexeme == "") {
+        lexeme = "nil";
+    }
+    else {
+        lexeme = type.lexeme;
+    }
+    cout << TokenTypeToString(type.type) << " " << lexeme << " " <<
         visit(LiteralToString{}, type.literal);
     return cout;
 }

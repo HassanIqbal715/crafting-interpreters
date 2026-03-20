@@ -5,7 +5,8 @@
 #include <memory>
 
 std::string parenthesize(std::string op, 
-    const std::vector<const Expr*> &exprs);
+    std::vector<Expr*> &exprs);
+std::string parenthesize(std::string op, Expr* expr);
 
 struct AstPrinter {
     std::string operator()(const Binary &expr);
