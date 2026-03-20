@@ -12,5 +12,6 @@ struct AstPrinter {
     std::string operator()(const Binary &expr);
     std::string operator()(const Grouping &expr);
     std::string operator()(const Literal &expr);
+    std::string operator()(const Ternary &expr);
     std::string operator()(const Unary &expr);
 };

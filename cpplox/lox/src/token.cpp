@@ -1,4 +1,5 @@
 #include "token.h"
+#include <iomanip>
 
 // The visitor struct
 std::string LiteralToString::operator()(double val) {

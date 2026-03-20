@@ -6,7 +6,7 @@
 
 struct Expr;
 
-using Object = std::variant<double, std::string, std::monostate>;
+using Object = std::variant<bool, double, std::string, std::monostate>;
 
 struct Binary {
 	std::unique_ptr<Expr> left;
@@ -22,12 +22,20 @@ struct Literal {
 	Object value;
 };
 
+struct Ternary {
+	std::unique_ptr<Expr> left;
+	Token op1;
+	std::unique_ptr<Expr> mid;
+	Token op2;
+	std::unique_ptr<Expr> right;
+};
+
 struct Unary {
 	Token op;
 	std::unique_ptr<Expr> right;
 };
 
-using ExprVariant = std::variant<Binary, Grouping, Literal, Unary>;
+using ExprVariant = std::variant<Binary, Grouping, Literal, Ternary, Unary>;
 
 struct Expr : ExprVariant {
 	using ExprVariant::variant;

@@ -31,7 +31,8 @@ void GenerateAst::defineAst(std::string outputDir, std::string baseName,
     file << "struct " << capitalize(baseName) << ";\n" << std::endl;
 
     file << "using Object = ";
-    file << "std::variant<double, std::string, std::monostate>;" << std::endl;
+    file << "std::variant<bool, double, std::string, std::monostate>;";
+    file << std::endl;
     
     file << std::endl;
     for (std::string type : types) {

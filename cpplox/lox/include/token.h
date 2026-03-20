@@ -2,8 +2,7 @@
 #include "token_type.h"
 #include <iostream>
 #include <variant>
-#include <iomanip>
-using Object = std::variant<double, std::string, std::monostate>;
+using Object = std::variant<bool, double, std::string, std::monostate>;
 
 struct LiteralToString{
     std::string operator()(double val);

@@ -4,7 +4,7 @@
 #include <vector>
 #include <memory>
 #include <unordered_map>
-using Object = std::variant<double, std::string, std::monostate>;
+using Object = std::variant<bool, double, std::string, std::monostate>;
 
 class Scanner {
 private:

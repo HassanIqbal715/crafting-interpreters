@@ -29,9 +29,7 @@ std::string parenthesize(std::string op, Expr* expr) {
 
 // Print visitor
 std::string AstPrinter::operator()(const Binary &expr) {
-    std::vector<Expr*> expressions;
-    expressions.push_back(expr.left.get());
-    expressions.push_back(expr.right.get());
+    std::vector<Expr*> expressions = {expr.left.get(), expr.right.get()};
     return parenthesize(expr.op.lexeme, expressions);
 }
 
@@ -41,6 +39,12 @@ std::string AstPrinter::operator()(const Grouping &expr) {
 
 std::string AstPrinter::operator()(const Literal &expr) {
     return std::visit(LiteralToString{}, expr.value);
+}
+
+std::string AstPrinter::operator()(const Ternary &expr) {
+    std::vector<Expr*> expressions = {
+        expr.left.get(), expr.mid.get(), expr.right.get()};
+    return parenthesize(expr.op1.lexeme + expr.op2.lexeme, expressions);
 }
 
 std::string AstPrinter::operator()(const Unary &expr) {

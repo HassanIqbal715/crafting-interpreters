@@ -11,9 +11,10 @@ int main(int argc, char* argv[]) {
     string outputDir = argv[1];
 
     GenerateAst::defineAst(outputDir, "expr", {
-        "Binary : Expr left, Token op, Expr right",
-        "Grouping : Expr expression",
-        "Literal : Object value",
-        "Unary : Token op, Expr right",
+        "Binary     : Expr left, Token op, Expr right",
+        "Grouping   : Expr expression",
+        "Literal    : Object value",
+        "Ternary    : Expr left, Token op1, Expr mid, Token op2, Expr right",
+        "Unary      : Token op, Expr right",
     });
 }
