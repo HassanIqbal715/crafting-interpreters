@@ -2,13 +2,20 @@
 #include "lox.h"
 #include "runtime_error.h"
 #include <cmath>
+#include <vector>
 #define EPSILON 1e-9
 
 // Constructor and Functions
-void Interpreter::interpret(Expr* expression) {
+Interpreter::Interpreter() {
+    this->environment = std::make_unique<Environment>();
+}
+
+void Interpreter::interpret(
+        std::vector<std::unique_ptr<Stmt>> &statements) {
     try {
-        Object value = evaluate(expression);
-        std::cout << stringify(value) << std::endl;
+        for (int i = 0; i < statements.size(); i++) {
+            execute(statements[i].get());
+        }
     }
     catch (RuntimeError &error) {
         Lox::runtimeError(error);
@@ -18,6 +25,29 @@ void Interpreter::interpret(Expr* expression) {
 // Interpreter class
 Object Interpreter::evaluate(Expr* expr) {
     return std::visit(*this, static_cast<ExprVariant&>(*expr));
+}
+
+void Interpreter::execute(Stmt* stmt) {
+    std::visit(*this, static_cast<StmtVariant&>(*stmt));
+}
+
+void Interpreter::executeBlock(std::vector<std::unique_ptr<Stmt>> &statements,
+        std::unique_ptr<Environment> &environment) {
+    std::unique_ptr<Environment> previous = std::move(this->environment);
+
+    this->environment = std::move(environment);
+        
+    try {
+        for(auto& statement : statements) {
+            execute(statement.get());
+        }
+    } 
+    catch(...) {
+        this->environment = std::move(previous);
+        throw;
+    }
+
+    this->environment = std::move(previous);
 }
 
 bool Interpreter::isTruthy(Object &object) {
@@ -86,6 +116,41 @@ void Interpreter::checkNumberOperands(Token &op, Object &left, Object &right) {
 }
 
 // Interpreter visitor
+
+// Statements
+
+void Interpreter::operator()(Block &stmt) {
+    std::unique_ptr<Environment> newEnvironment = std::make_unique<Environment>(
+        this->environment.get());
+    executeBlock(stmt.statements, newEnvironment);
+}
+
+void Interpreter::operator()(Expression &stmt) {
+    evaluate(stmt.expression.get());
+}
+
+void Interpreter::operator()(Print &stmt) {
+    Object value = evaluate(stmt.expression.get());
+    std::cout << stringify(value) << std::endl;
+}
+
+void Interpreter::operator()(Var &stmt) {
+    Object value = std::monostate{};
+    if (stmt.initializer != NULL) {
+        value = evaluate(stmt.initializer.get());
+    }
+
+    environment.get()->define(stmt.name.lexeme, value);
+}
+
+// Expressions
+
+Object Interpreter::operator()(Assign &expr) {
+    Object value = evaluate(expr.value.get());
+    environment.get()->assign(expr.name, value);
+    return value;
+}
+
 Object Interpreter::operator()(Binary &expr) {
     Object left = evaluate(expr.left.get());
     Object right = evaluate(expr.right.get());
@@ -181,4 +246,8 @@ Object Interpreter::operator()(Unary &expr) {
     }
 
     return std::monostate{};
+}
+
+Object Interpreter::operator()(Variable &expr) {
+    return environment.get()->get(expr.name);
 }

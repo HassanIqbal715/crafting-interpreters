@@ -5,7 +5,7 @@
 #include <iostream>
 
 void GenerateAst::defineAst(std::string outputDir, std::string baseName, 
-        std::vector<std::string> types) {
+        std::vector<std::string> types, bool includeExpr) {
     std::filesystem::path path = outputDir + "/";
     
     if (!std::filesystem::exists(path)) {
@@ -25,9 +25,12 @@ void GenerateAst::defineAst(std::string outputDir, std::string baseName,
 
     file << "#pragma once" << std::endl;
     file << "#include \"token.h\"" << std::endl;
+    if (includeExpr)
+        file << "#include \"expr.h\"" << std::endl;
     file << "#include <vector>" << std::endl;
     file << "#include <variant>" << std::endl;
     file << "#include <memory>\n" << std::endl;
+    file << "using namespace std;\n" << std::endl;
     file << "struct " << capitalize(baseName) << ";\n" << std::endl;
 
     file << "using Object = ";
@@ -54,19 +57,7 @@ void GenerateAst::defineType(std::fstream &file, std::string baseName,
     
     std::vector<std::string> fields = split(fieldList, ", ");
     for (std::string field : fields) {
-        std::vector<std::string> fieldSplit = split(field, " "); 
-        file << "\t";
-        if (fieldSplit[0].compare(baseName) == 0) {
-            file << "std::unique_ptr<";
-        }
-        file << fieldSplit[0];
-        if (fieldSplit[0].compare(baseName) == 0) {
-            file << "> ";
-        }
-        else {
-            file << " ";
-        }
-        file << fieldSplit[1] + ";" << std::endl;
+        file << "\t" << field << ";" << std::endl;;
     }
 
     file << "};" << std::endl;

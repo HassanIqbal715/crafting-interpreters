@@ -1,7 +1,8 @@
 #pragma once
+#include "expr.h"
+#include "stmt.h"
 #include "token.h"
 #include "token_type.h"
-#include "expr.h"
 #include <vector>
 
 class Parser {
@@ -11,12 +12,20 @@ private:
         ParseError();
     };
 
+    // Attributes
     std::vector<Token> tokens;
     int current;
 
     // Parsing
     std::unique_ptr<Expr> expression();
+    std::unique_ptr<Stmt> declaration();
+    std::unique_ptr<Stmt> statement();
+    std::unique_ptr<Stmt> printStatement();
+    std::unique_ptr<Stmt> varDeclaration();
+    std::unique_ptr<Stmt> expressionStatement();
+    std::vector<std::unique_ptr<Stmt>> block();
     std::unique_ptr<Expr> comma();
+    std::unique_ptr<Expr> assignment();
     std::unique_ptr<Expr> conditional();
     std::unique_ptr<Expr> equality();
     std::unique_ptr<Expr> comparison();
@@ -29,15 +38,15 @@ private:
     bool match(std::vector<TokenType> &types);
     bool match(TokenType type);
     Token consume(TokenType type, std::string message);
-    bool check(TokenType &type);
+    bool check(TokenType type);
     Token advance();
     bool isAtEnd();
-    Token peek();
+    Token &peek();
     Token previous();
-    ParseError error(Token token, std::string message);
+    ParseError error(Token &token, std::string message);
     void synchronize();
 
 public:
     Parser(std::vector<Token> &tokens);
-    std::unique_ptr<Expr> parse();
+    std::vector<std::unique_ptr<Stmt>> parse();
 };

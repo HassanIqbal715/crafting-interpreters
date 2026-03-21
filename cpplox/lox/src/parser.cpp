@@ -36,7 +36,7 @@ Token Parser::consume(TokenType type, std::string message) {
     throw error(peek(), message);
 }
 
-bool Parser::check(TokenType &type) {
+bool Parser::check(TokenType type) {
     if (isAtEnd()) return false;
     return peek().type == type;
 }
@@ -50,7 +50,7 @@ bool Parser::isAtEnd() {
     return peek().type == EOFILE;
 }
 
-Token Parser::peek() {
+Token &Parser::peek() {
     return tokens[current];
 }
 
@@ -58,7 +58,7 @@ Token Parser::previous() {
     return tokens[current - 1];    
 }
 
-Parser::ParseError Parser::error(Token token, std::string message) {
+Parser::ParseError Parser::error(Token &token, std::string message) {
     Lox::error(token, message);
     return Parser::ParseError();
 }
@@ -86,27 +86,100 @@ void Parser::synchronize() {
 }
 
 // Parsing 
-std::unique_ptr<Expr> Parser::parse() {
-    try {
-        return expression();
+std::vector<std::unique_ptr<Stmt>> Parser::parse() {
+    std::vector<std::unique_ptr<Stmt>> statements;
+    while(!isAtEnd()) {
+        statements.push_back(declaration());
     }
-    catch(ParseError &error) {
-        return NULL;
-    }
+
+    return statements;
 }
 
 std::unique_ptr<Expr> Parser::expression() {
     return comma();
 }
 
+std::unique_ptr<Stmt> Parser::declaration() {
+    try {
+        if (match(VAR)) return varDeclaration();
+
+        return statement();
+    }
+    catch (ParseError &error) {
+        synchronize();
+        return NULL;
+    }
+}
+
+std::unique_ptr<Stmt> Parser::statement() {
+    if (match(PRINT)) return printStatement();
+    if (match(LEFT_BRACE)) return std::make_unique<Stmt>(
+        Block{block()});
+    return expressionStatement();
+}
+
+std::unique_ptr<Stmt> Parser::printStatement() {
+    std::unique_ptr<Expr> value = expression();
+    consume(SEMICOLON, "Expect ';' after the value.");
+    return std::make_unique<Stmt>(Print{std::move(value)}); 
+}
+
+std::unique_ptr<Stmt> Parser::varDeclaration() {
+    Token name = consume(IDENTIFIER, "Expect variable name.");
+
+    std::unique_ptr<Expr> initializer = NULL;
+    if (match(EQUAL)) {
+        initializer = expression();
+    }
+
+    consume(SEMICOLON, "Expect ';' after variable declaration.");
+    return std::make_unique<Stmt>(Var{name, std::move(initializer)});
+}
+
+std::unique_ptr<Stmt> Parser::expressionStatement() {
+    std::unique_ptr<Expr> expr = expression();
+    consume(SEMICOLON, "Expect ';' after expression.");
+    return std::make_unique<Stmt>(Expression{std::move(expr)});
+}
+
+std::vector<std::unique_ptr<Stmt>> Parser::block() {
+    std::vector<std::unique_ptr<Stmt>> statements;
+
+    while (!check(RIGHT_BRACE) && !isAtEnd()) {
+        statements.push_back(declaration());
+    }
+
+    consume(RIGHT_BRACE, "Expect '}' after block.");
+    return statements;
+}
+
 std::unique_ptr<Expr> Parser::comma() {
-    std::unique_ptr<Expr> expr = conditional();
+    std::unique_ptr<Expr> expr = assignment();
 
     while (match(COMMA)) {
         Token op = previous();
-        std::unique_ptr<Expr> right = conditional();
+        std::unique_ptr<Expr> right = assignment();
         expr = std::make_unique<Expr>(Binary{
             std::move(expr), op, std::move(right)});
+    }
+
+    return expr;
+}
+
+std::unique_ptr<Expr> Parser::assignment() {
+    std::unique_ptr<Expr> expr = conditional();
+
+    if (match(EQUAL)) {
+        Token equals = previous();
+        std::unique_ptr<Expr> right = assignment();
+
+        if (std::holds_alternative<Variable>(*expr)) {
+            Token name = std::get<Variable>(*expr).name;
+            return std::make_unique<Expr>(Assign{
+                name, std::move(right)});
+        }
+
+        error(equals, "Inavlid assignment target.");
     }
 
     return expr;
@@ -206,6 +279,10 @@ std::unique_ptr<Expr> Parser::primary() {
     std::vector<TokenType> numberAndString = {NUMBER, STRING}; 
     if (match(numberAndString)) {
         return std::make_unique<Expr>(Literal{previous().literal});
+    }
+
+    if (match(IDENTIFIER)) {
+        return std::make_unique<Expr>(Variable{previous()});
     }
 
     if (match(LEFT_PAREN)) {

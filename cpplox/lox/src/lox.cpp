@@ -39,11 +39,11 @@ void Lox::run(std::string_view source) {
     std::vector<Token> tokens = scanner.scanTokens();
 
     Parser parser(tokens);
-    std::unique_ptr<Expr> expression = parser.parse();
+    std::vector<std::unique_ptr<Stmt>> statements = parser.parse();
 
     if (hadError) return;
 
-    interpreter.get()->interpret(expression.get());
+    interpreter.get()->interpret(statements);
 }
 
 void Lox::error(int line, std::string message) {
@@ -56,7 +56,7 @@ void Lox::report(int line, std::string where, std::string message) {
     hadError = true;
 }
 
-void Lox::error(Token token, std::string message) {
+void Lox::error(Token &token, std::string message) {
     if (token.type == EOFILE) {
         report(token.line, " at end", message);
     }

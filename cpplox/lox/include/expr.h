@@ -4,18 +4,25 @@
 #include <variant>
 #include <memory>
 
+using namespace std;
+
 struct Expr;
 
 using Object = std::variant<bool, double, std::string, std::monostate>;
 
+struct Assign {
+	Token name;
+	unique_ptr<Expr> value;
+};
+
 struct Binary {
-	std::unique_ptr<Expr> left;
+	unique_ptr<Expr> left;
 	Token op;
-	std::unique_ptr<Expr> right;
+	unique_ptr<Expr> right;
 };
 
 struct Grouping {
-	std::unique_ptr<Expr> expression;
+	unique_ptr<Expr> expression;
 };
 
 struct Literal {
@@ -23,19 +30,24 @@ struct Literal {
 };
 
 struct Ternary {
-	std::unique_ptr<Expr> left;
+	unique_ptr<Expr> left;
 	Token op1;
-	std::unique_ptr<Expr> mid;
+	unique_ptr<Expr> mid;
 	Token op2;
-	std::unique_ptr<Expr> right;
+	unique_ptr<Expr> right;
 };
 
 struct Unary {
 	Token op;
-	std::unique_ptr<Expr> right;
+	unique_ptr<Expr> right;
 };
 
-using ExprVariant = std::variant<Binary, Grouping, Literal, Ternary, Unary>;
+struct Variable {
+	Token name;
+};
+
+using ExprVariant = std::variant<Assign, Binary, Grouping, Literal, Ternary, 
+		Unary, Variable>;
 
 struct Expr : ExprVariant {
 	using ExprVariant::variant;
