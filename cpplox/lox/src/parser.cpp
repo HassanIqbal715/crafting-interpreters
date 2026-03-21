@@ -112,10 +112,89 @@ std::unique_ptr<Stmt> Parser::declaration() {
 }
 
 std::unique_ptr<Stmt> Parser::statement() {
+    if (match(BREAK)) return breakStatement();
+    if (match(FOR)) return forStatement();
+    if (match(IF)) return ifStatement();
     if (match(PRINT)) return printStatement();
     if (match(LEFT_BRACE)) return std::make_unique<Stmt>(
         Block{block()});
+    if (match(WHILE)) return whileStatement();
+
     return expressionStatement();
+}
+
+std::unique_ptr<Stmt> Parser::breakStatement() {
+    Token name = previous();
+    consume(SEMICOLON, "Expect ';' after 'break'.");
+
+    return std::make_unique<Stmt>(Break{std::move(name)}); 
+}
+
+std::unique_ptr<Stmt> Parser::forStatement() {
+    consume(LEFT_PAREN, "Expect '(' after 'for'.");
+
+    std::unique_ptr<Stmt> initializer = NULL;
+    if (match(SEMICOLON)) {
+        initializer = NULL;
+    }
+    else if (match(VAR)) {
+        initializer = varDeclaration();
+    }
+    else {
+        initializer = expressionStatement();
+    }
+
+    std::unique_ptr<Expr> condition = NULL;
+    if (!check(SEMICOLON)) {
+        condition = expression();
+    }
+    consume(SEMICOLON, "Expect ';' after loop condition.");
+
+    std::unique_ptr<Expr> increment = NULL;
+    if (!check(RIGHT_PAREN)) {
+        increment = expression();
+    }
+    consume(RIGHT_PAREN, "Expect ')' after for clauses.");
+    std::unique_ptr<Stmt> body = statement();
+
+    if (increment != NULL) {
+        std::vector<std::unique_ptr<Stmt>> statements;
+        statements.push_back(std::move(body));
+        statements.push_back(
+            std::make_unique<Stmt>(Expression{std::move(increment)})
+        );
+
+        body = std::make_unique<Stmt>(Block{std::move(statements)});
+    }
+
+    if (condition == NULL) 
+        condition = std::make_unique<Expr>(Literal{true});
+
+    body = std::make_unique<Stmt>(While{std::move(condition), std::move(body)});
+
+    if (initializer != NULL) {
+        std::vector<std::unique_ptr<Stmt>> statements;
+        statements.push_back(std::move(initializer));
+        statements.push_back(std::move(body));
+        body = std::make_unique<Stmt>(Block{std::move(statements)});
+    }
+
+    return body;
+}
+
+std::unique_ptr<Stmt> Parser::ifStatement() {
+    consume(LEFT_PAREN, "Expect '(' after 'if'.");
+    std::unique_ptr<Expr> condition = expression();
+    consume(RIGHT_PAREN, "Expect ')' after if condition.");
+
+    std::unique_ptr<Stmt> thenBranch = statement();
+    std::unique_ptr<Stmt> elseBranch = NULL;
+    if (match(ELSE)) {
+        elseBranch = statement();
+    }
+
+    return std::make_unique<Stmt>(If{std::move(condition), 
+        std::move(thenBranch), std::move(elseBranch)});
 }
 
 std::unique_ptr<Stmt> Parser::printStatement() {
@@ -133,7 +212,16 @@ std::unique_ptr<Stmt> Parser::varDeclaration() {
     }
 
     consume(SEMICOLON, "Expect ';' after variable declaration.");
-    return std::make_unique<Stmt>(Var{name, std::move(initializer)});
+    return std::make_unique<Stmt>(Var{std::move(name), std::move(initializer)});
+}
+
+std::unique_ptr<Stmt> Parser::whileStatement() {
+    consume(LEFT_PAREN, "Expect '(' after 'while'.");
+    std::unique_ptr<Expr> condition = expression();
+    consume(RIGHT_PAREN, "Expect ')' after the condition.");
+    std::unique_ptr<Stmt> body = statement();
+
+    return std::make_unique<Stmt>(While{std::move(condition), std::move(body)});
 }
 
 std::unique_ptr<Stmt> Parser::expressionStatement() {
@@ -160,7 +248,7 @@ std::unique_ptr<Expr> Parser::comma() {
         Token op = previous();
         std::unique_ptr<Expr> right = assignment();
         expr = std::make_unique<Expr>(Binary{
-            std::move(expr), op, std::move(right)});
+            std::move(expr), std::move(op), std::move(right)});
     }
 
     return expr;
@@ -176,7 +264,7 @@ std::unique_ptr<Expr> Parser::assignment() {
         if (std::holds_alternative<Variable>(*expr)) {
             Token name = std::get<Variable>(*expr).name;
             return std::make_unique<Expr>(Assign{
-                name, std::move(right)});
+                std::move(name), std::move(right)});
         }
 
         error(equals, "Inavlid assignment target.");
@@ -186,7 +274,7 @@ std::unique_ptr<Expr> Parser::assignment() {
 }
 
 std::unique_ptr<Expr> Parser::conditional() {
-    std::unique_ptr<Expr> expr = equality();
+    std::unique_ptr<Expr> expr = logicalOr();
 
     while(match(QUESTION)) {
         Token op1 = previous();
@@ -196,8 +284,34 @@ std::unique_ptr<Expr> Parser::conditional() {
 
         std::unique_ptr<Expr> right = conditional();
 
-        expr = std::make_unique<Expr>(Ternary{std::move(expr), op1, 
-            std::move(mid), op2, std::move(right)});
+        expr = std::make_unique<Expr>(Ternary{std::move(expr), std::move(op1), 
+            std::move(mid), std::move(op2), std::move(right)});
+    }
+
+    return expr;
+}
+
+std::unique_ptr<Expr> Parser::logicalOr() {
+    std::unique_ptr<Expr> expr = logicalAnd();
+
+    while(match(OR)) {
+        Token op = previous();
+        std::unique_ptr<Expr> right = logicalAnd();
+        expr = std::make_unique<Expr>(Logical{std::move(expr), std::move(op), 
+            std::move(right)});
+    }
+
+    return expr;
+}
+
+std::unique_ptr<Expr> Parser::logicalAnd() {
+    std::unique_ptr<Expr> expr = equality();
+
+    while(match(AND)) {
+        Token op = previous();
+        std::unique_ptr<Expr> right = equality();
+        expr = std::make_unique<Expr>(Logical{std::move(expr), std::move(op), 
+            std::move(right)});
     }
 
     return expr;
@@ -211,7 +325,7 @@ std::unique_ptr<Expr> Parser::equality() {
         Token op = previous();
         std::unique_ptr<Expr> right = comparison();
         expr = std::make_unique<Expr>(Binary{
-            std::move(expr), op, std::move(right)});
+            std::move(expr), std::move(op), std::move(right)});
     }
 
     return expr;
@@ -225,7 +339,7 @@ std::unique_ptr<Expr> Parser::comparison() {
         Token op = previous();
         std::unique_ptr<Expr> right = term();
         expr = std::make_unique<Expr>(Binary{
-            std::move(expr), op, std::move(right)});
+            std::move(expr), std::move(op), std::move(right)});
     }
 
     return expr;
@@ -239,7 +353,7 @@ std::unique_ptr<Expr> Parser::term() {
         Token op = previous();
         std::unique_ptr<Expr> right = factor();
         expr = std::make_unique<Expr>(Binary{
-            std::move(expr), op, std::move(right)});
+            std::move(expr), std::move(op), std::move(right)});
     }
 
     return expr;
@@ -253,7 +367,7 @@ std::unique_ptr<Expr> Parser::factor() {
         Token op = previous();
         std::unique_ptr<Expr> right = unary();
         expr = std::make_unique<Expr>(Binary{
-            std::move(expr), op, std::move(right)});
+            std::move(expr), std::move(op), std::move(right)});
     }
 
     return expr;
@@ -265,7 +379,7 @@ std::unique_ptr<Expr> Parser::unary() {
     if (match(types)) {
         Token op = previous();
         std::unique_ptr<Expr> right = unary();
-        return std::make_unique<Expr>(Unary{op, std::move(right)});
+        return std::make_unique<Expr>(Unary{std::move(op), std::move(right)});
     }
 
     return primary();

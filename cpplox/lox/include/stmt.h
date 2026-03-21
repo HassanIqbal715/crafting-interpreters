@@ -15,8 +15,18 @@ struct Block {
 	vector<unique_ptr<Stmt>> statements;
 };
 
+struct Break {
+	Token name;
+};
+
 struct Expression {
 	unique_ptr<Expr> expression;
+};
+
+struct If {
+	unique_ptr<Expr> condition;
+	unique_ptr<Stmt> thenBranch;
+	unique_ptr<Stmt> elseBranch;
 };
 
 struct Print {
@@ -28,7 +38,13 @@ struct Var {
 	unique_ptr<Expr> initializer;
 };
 
-using StmtVariant = std::variant<Block, Expression, Print, Var>;
+struct While {
+	unique_ptr<Expr> condition;
+	unique_ptr<Stmt> body;
+};
+
+using StmtVariant = std::variant<Block, Break, Expression, If, Print, Var, 
+		While>;
 
 struct Stmt : StmtVariant {
 	using StmtVariant::variant;

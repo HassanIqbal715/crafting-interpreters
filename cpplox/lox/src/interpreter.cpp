@@ -1,4 +1,5 @@
 #include "interpreter.h"
+#include "break.h"
 #include "lox.h"
 #include "runtime_error.h"
 #include <cmath>
@@ -129,6 +130,20 @@ void Interpreter::operator()(Expression &stmt) {
     evaluate(stmt.expression.get());
 }
 
+void Interpreter::operator()(Break &stmt) {
+    throw BreakException();
+}
+
+void Interpreter::operator()(If &stmt) {
+    Object condition;
+    if (isTruthy(condition = evaluate(stmt.condition.get()))) {
+        execute(stmt.thenBranch.get());
+    }
+    else if (stmt.elseBranch != NULL) {
+        execute(stmt.elseBranch.get());
+    }
+}
+
 void Interpreter::operator()(Print &stmt) {
     Object value = evaluate(stmt.expression.get());
     std::cout << stringify(value) << std::endl;
@@ -141,6 +156,16 @@ void Interpreter::operator()(Var &stmt) {
     }
 
     environment.get()->define(stmt.name.lexeme, value);
+}
+
+void Interpreter::operator()(While &stmt) {
+    try {
+        Object condition;
+        while(isTruthy(condition = evaluate(stmt.condition.get()))) {
+            execute(stmt.body.get());
+        }
+    }
+    catch (BreakException &error) {}
 }
 
 // Expressions
@@ -220,6 +245,19 @@ Object Interpreter::operator()(Binary &expr) {
 
 Object Interpreter::operator()(Literal &expr) {
     return expr.value;
+}
+
+Object Interpreter::operator()(Logical &expr) {
+    Object left = evaluate(expr.left.get());
+
+    if (expr.op.type == OR) {
+        if (isTruthy(left)) return left;
+    }
+    else {
+        if (!isTruthy(left)) return left;
+    }
+
+    return evaluate(expr.right.get());
 }
 
 Object Interpreter::operator()(Grouping &expr) {

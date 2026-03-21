@@ -48,6 +48,7 @@ std::string TokenTypeToString(TokenType type) {
         case STRING: return "STRING";
         case NUMBER: return "NUMBER";
         case AND: return "AND";
+        case BREAK: return "BREAK";
         case CLASS: return "CLASS";
         case ELSE: return "ELSE";
         case FALSE: return "FALSE";

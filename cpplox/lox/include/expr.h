@@ -29,6 +29,12 @@ struct Literal {
 	Object value;
 };
 
+struct Logical {
+	unique_ptr<Expr> left;
+	Token op;
+	unique_ptr<Expr> right;
+};
+
 struct Ternary {
 	unique_ptr<Expr> left;
 	Token op1;
@@ -46,8 +52,8 @@ struct Variable {
 	Token name;
 };
 
-using ExprVariant = std::variant<Assign, Binary, Grouping, Literal, Ternary, 
-		Unary, Variable>;
+using ExprVariant = std::variant<Assign, Binary, Grouping, Literal, Logical, 
+		Ternary, Unary, Variable>;
 
 struct Expr : ExprVariant {
 	using ExprVariant::variant;

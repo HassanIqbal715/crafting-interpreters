@@ -28,12 +28,16 @@ public:
 
     void operator()(Block &stmt);
     void operator()(Expression &stmt);
+    void operator()(Break &stmt);
+    void operator()(If &stmt);
     void operator()(Print &stmt);
     void operator()(Var &stmt);
+    void operator()(While &stmt);
     Object operator()(Assign &expr);
     Object operator()(Binary &expr);
     Object operator()(Grouping &expr);
     Object operator()(Literal &expr);
+    Object operator()(Logical &expr);
     Object operator()(Ternary &expr);
     Object operator()(Unary &expr);
     Object operator()(Variable &expr);

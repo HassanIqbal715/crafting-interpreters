@@ -3,6 +3,7 @@
 
 std::unordered_map<std::string, TokenType> Scanner::keywords = {
     {"and",    AND},
+    {"break",  BREAK},
     {"class",  CLASS},
     {"else",   ELSE},
     {"false",  FALSE},
