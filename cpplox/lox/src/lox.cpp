@@ -31,6 +31,7 @@ void Lox::runPrompt() {
             return;
         }
         run(line);
+        hadError = false;
     }
 }
 
