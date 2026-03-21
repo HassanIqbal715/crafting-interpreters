@@ -14,6 +14,10 @@ Environment::Environment(Environment *enclosing) {
 Object Environment::get(Token &name) {
     auto it = values.find(name.lexeme);
     if (it != values.end()) {
+        if (std::holds_alternative<std::monostate>(it->second)) {
+            throw RuntimeError(name, 
+                "Uninitialized variable '" + name.lexeme + "'.");
+        }
         return it->second;
     }
 
