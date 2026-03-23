@@ -24,20 +24,16 @@ void GenerateAst::defineAst(std::string outputDir, std::string baseName,
     }
 
     file << "#pragma once" << std::endl;
-    file << "#include \"token.h\"" << std::endl;
+    file << "#include \"object.h\"" << std::endl;
     if (includeExpr)
         file << "#include \"expr.h\"" << std::endl;
+    file << "#include \"token.h\"" << std::endl;
     file << "#include <vector>" << std::endl;
     file << "#include <variant>" << std::endl;
     file << "#include <memory>\n" << std::endl;
     file << "using namespace std;\n" << std::endl;
     file << "struct " << capitalize(baseName) << ";\n" << std::endl;
 
-    file << "using Object = ";
-    file << "std::variant<bool, double, std::string, std::monostate>;";
-    file << std::endl;
-    
-    file << std::endl;
     for (std::string type : types) {
         std::string className = trim(split(type, ":")[0]);
         std::string fields = trim(split(type, ":")[1]);

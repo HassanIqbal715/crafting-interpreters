@@ -45,6 +45,10 @@ void Lox::run(std::string_view source) {
     if (hadError) return;
 
     interpreter.get()->interpret(statements);
+    
+    for (int i = 0; i < statements.size(); i++) {
+        globalMemoryStorage.push_back(std::move(statements[i]));
+    }
 }
 
 void Lox::error(int line, std::string message) {

@@ -1,4 +1,5 @@
 #pragma once
+#include "object.h"
 #include "token.h"
 #include <vector>
 #include <variant>
@@ -7,8 +8,6 @@
 using namespace std;
 
 struct Expr;
-
-using Object = std::variant<bool, double, std::string, std::monostate>;
 
 struct Assign {
 	Token name;
@@ -19,6 +18,12 @@ struct Binary {
 	unique_ptr<Expr> left;
 	Token op;
 	unique_ptr<Expr> right;
+};
+
+struct Call {
+	unique_ptr<Expr> callee;
+	Token paren;
+	vector<unique_ptr<Expr>> arguments;
 };
 
 struct Grouping {
@@ -52,8 +57,8 @@ struct Variable {
 	Token name;
 };
 
-using ExprVariant = std::variant<Assign, Binary, Grouping, Literal, Logical, 
-		Ternary, Unary, Variable>;
+using ExprVariant = std::variant<Assign, Binary, Call, Grouping, Literal, 
+		Logical, Ternary, Unary, Variable>;
 
 struct Expr : ExprVariant {
 	using ExprVariant::variant;

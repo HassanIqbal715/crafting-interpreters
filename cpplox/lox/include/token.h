@@ -1,14 +1,8 @@
 #pragma once
+#include "object.h"
 #include "token_type.h"
 #include <iostream>
 #include <variant>
-using Object = std::variant<bool, double, std::string, std::monostate>;
-
-struct LiteralToString{
-    std::string operator()(double val);
-    std::string operator()(std::string val);
-    std::string operator()(std::monostate val);
-};
 
 struct Token {
     TokenType type;

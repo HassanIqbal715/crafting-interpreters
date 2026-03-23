@@ -1,14 +1,31 @@
 #include "interpreter.h"
 #include "break.h"
+#include "lox_function.h"
 #include "lox.h"
+#include "native_function.h"
+#include "return.h"
 #include "runtime_error.h"
+#include <chrono>
 #include <cmath>
 #include <vector>
 #define EPSILON 1e-9
 
 // Constructor and Functions
 Interpreter::Interpreter() {
-    this->environment = std::make_unique<Environment>();
+    this->globals = std::make_shared<Environment>();
+    this->environment = globals;
+
+    globals->define("clock", std::make_shared<NativeFunction>(
+        0,
+        [](Interpreter& interpreter, const std::vector<Object> &arguments) -> 
+                Object {
+            auto now = std::chrono::system_clock::now().time_since_epoch();
+            return static_cast<double>(
+                std::chrono::duration_cast<
+                    std::chrono::milliseconds>(now).count()
+            ) / 1000.0;
+        }
+    ));
 }
 
 void Interpreter::interpret(
@@ -33,22 +50,22 @@ void Interpreter::execute(Stmt* stmt) {
 }
 
 void Interpreter::executeBlock(std::vector<std::unique_ptr<Stmt>> &statements,
-        std::unique_ptr<Environment> &environment) {
-    std::unique_ptr<Environment> previous = std::move(this->environment);
+        std::shared_ptr<Environment> &environment) {
+    std::shared_ptr<Environment> previous = this->environment;
 
-    this->environment = std::move(environment);
-        
+    this->environment = environment;
+
     try {
         for(auto& statement : statements) {
             execute(statement.get());
         }
     } 
     catch(...) {
-        this->environment = std::move(previous);
+        this->environment = previous;
         throw;
     }
 
-    this->environment = std::move(previous);
+    this->environment = previous;
 }
 
 bool Interpreter::isTruthy(Object &object) {
@@ -94,6 +111,10 @@ std::string Interpreter::stringify(Object &object) {
         }
     }
 
+    if (std::holds_alternative<std::shared_ptr<LoxCallable>>(object)) {
+        return "callable";
+    }
+
     return std::get<std::string>(object);
 }
 
@@ -121,17 +142,24 @@ void Interpreter::checkNumberOperands(Token &op, Object &left, Object &right) {
 // Statements
 
 void Interpreter::operator()(Block &stmt) {
-    std::unique_ptr<Environment> newEnvironment = std::make_unique<Environment>(
-        this->environment.get());
+    std::shared_ptr<Environment> newEnvironment = std::make_shared<Environment>(
+        this->environment);
     executeBlock(stmt.statements, newEnvironment);
 }
+
+void Interpreter::operator()(Break &stmt) {
+    throw BreakException();
+}
+
 
 void Interpreter::operator()(Expression &stmt) {
     evaluate(stmt.expression.get());
 }
 
-void Interpreter::operator()(Break &stmt) {
-    throw BreakException();
+void Interpreter::operator()(Function &stmt) {
+    std::shared_ptr<LoxFunction> function = 
+        std::make_shared<LoxFunction>(&stmt, environment);
+    environment->define(stmt.name.lexeme, function);
 }
 
 void Interpreter::operator()(If &stmt) {
@@ -147,6 +175,13 @@ void Interpreter::operator()(If &stmt) {
 void Interpreter::operator()(Print &stmt) {
     Object value = evaluate(stmt.expression.get());
     std::cout << stringify(value) << std::endl;
+}
+
+void Interpreter::operator()(Return &stmt) {
+    Object value = std::monostate{};
+    if (stmt.value != NULL) value = evaluate(stmt.value.get());
+
+    throw ReturnException(value);
 }
 
 void Interpreter::operator()(Var &stmt) {
@@ -241,6 +276,30 @@ Object Interpreter::operator()(Binary &expr) {
     }
 
     return std::monostate{};
+}
+
+Object Interpreter::operator()(Call &expr) {
+    Object callee = evaluate(expr.callee.get());
+
+    std::vector<Object> arguments;
+    for (auto& argument : expr.arguments) {
+        arguments.push_back(evaluate(argument.get()));
+    }
+
+    if (!std::holds_alternative<std::shared_ptr<LoxCallable>>(callee)) {
+        throw RuntimeError(expr.paren, "Can only call functions and classes.");
+    }
+
+    std::shared_ptr<LoxCallable> function = std::get<
+        std::shared_ptr<LoxCallable>>(callee);
+
+    if (arguments.size() != function->arity()) {
+        throw RuntimeError(expr.paren, "Expected " + std::to_string(
+            function->arity()) + " arguments but got " + 
+            std::to_string(arguments.size()) + ".");
+    }
+
+    return function->call((*this), arguments); 
 }
 
 Object Interpreter::operator()(Literal &expr) {

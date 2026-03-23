@@ -1,20 +1,18 @@
 #pragma once
+#include "object.h"
 #include "environment.h"
 #include "expr.h"
 #include "stmt.h"
 #include <string>
 #include <variant>
 #include <vector>
-using Object = std::variant<bool, double, std::string, std::monostate>;
 
 class Interpreter {
 private:
-    std::unique_ptr<Environment> environment;
+    std::shared_ptr<Environment> environment;
 
     Object evaluate(Expr* expr);
     void execute(Stmt* stmt);
-    void executeBlock(std::vector<std::unique_ptr<Stmt>> &statements, 
-        std::unique_ptr<Environment> &environment);
     bool isTruthy(Object &object);
     bool isEqual(Object &a, Object &b);
     std::string stringify(Object &object);
@@ -23,18 +21,26 @@ private:
     void checkNumberOperands(Token &op, Object &left, Object &right);
 
 public:
+    std::shared_ptr<Environment> globals;
+
     Interpreter();
     void interpret(std::vector<std::unique_ptr<Stmt>> &statements);
 
+    void executeBlock(std::vector<std::unique_ptr<Stmt>> &statements, 
+        std::shared_ptr<Environment> &environment);
+
     void operator()(Block &stmt);
-    void operator()(Expression &stmt);
     void operator()(Break &stmt);
+    void operator()(Expression &stmt);
+    void operator()(Function &stmt);
     void operator()(If &stmt);
     void operator()(Print &stmt);
+    void operator()(Return &stmt);
     void operator()(Var &stmt);
     void operator()(While &stmt);
     Object operator()(Assign &expr);
     Object operator()(Binary &expr);
+    Object operator()(Call &expr);
     Object operator()(Grouping &expr);
     Object operator()(Literal &expr);
     Object operator()(Logical &expr);

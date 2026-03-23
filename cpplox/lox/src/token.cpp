@@ -1,19 +1,6 @@
 #include "token.h"
 #include <iomanip>
 
-// The visitor struct
-std::string LiteralToString::operator()(double val) {
-    return std::to_string(val);
-}
-
-std::string LiteralToString::operator()(std::string val) {
-    return val;
-}
-
-std::string LiteralToString::operator()(std::monostate val) {
-    return "nil";
-}
-
 // Default constructor
 Token::Token(TokenType type, std::string lexeme, Object literal, int line) {
     this->type = type;
@@ -79,6 +66,6 @@ std::ostream &operator<<(std::ostream &cout, const Token &type) {
         lexeme = type.lexeme;
     }
     cout << TokenTypeToString(type.type) << " " << lexeme << " " <<
-        visit(LiteralToString{}, type.literal);
+        visit(ObjectToString{}, type.literal);
     return cout;
 }

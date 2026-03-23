@@ -8,6 +8,7 @@
 class Lox {
 private:
     static std::unique_ptr<Interpreter> interpreter;
+    inline static std::vector<std::unique_ptr<Stmt>> globalMemoryStorage;
 
 public:    
     static bool hadError;

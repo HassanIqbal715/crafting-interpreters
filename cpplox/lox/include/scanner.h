@@ -1,10 +1,10 @@
 #pragma once
+#include "object.h"
 #include "token.h"
 #include <string>
 #include <vector>
 #include <memory>
 #include <unordered_map>
-using Object = std::variant<bool, double, std::string, std::monostate>;
 
 class Scanner {
 private:

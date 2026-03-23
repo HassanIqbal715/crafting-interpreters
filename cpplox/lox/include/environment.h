@@ -1,20 +1,20 @@
 #pragma once
 #include "token.h"
+#include "object.h"
 #include <string>
 #include <unordered_map>
 #include <variant>
-using Object = std::variant<bool, double, std::string, std::monostate>;
 
 class Environment {
 private:
-    Environment* enclosing;
+    std::shared_ptr<Environment> enclosing;
     std::unordered_map<std::string, Object> values;
 
 public:
     Environment();
-    Environment(Environment *enclosing);
+    Environment(std::shared_ptr<Environment> &enclosing);
     
     Object get(Token &name);
     void assign(Token &name, Object &value);
-    void define(std::string &name, Object &value);
+    void define(std::string name, Object value);
 };
