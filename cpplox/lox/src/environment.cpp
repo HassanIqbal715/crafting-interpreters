@@ -44,3 +44,19 @@ void Environment::assign(Token &name, Object &value) {
 void Environment::define(std::string name, Object value) {
     values.insert({name, value});
 }
+
+Environment* Environment::ancestor(int distance) {
+    Environment *environment = this;
+    for (int i = 0; i < distance; i++) {
+        environment = environment->enclosing.get();
+    }
+    return environment;
+}
+
+Object Environment::getAt(int distance, std::string name) {
+    return ancestor(distance)->values[name];
+}
+
+void Environment::assignAt(int distance, Token &name, Object value) {
+    ancestor(distance)->values.insert({name.lexeme, value});
+}

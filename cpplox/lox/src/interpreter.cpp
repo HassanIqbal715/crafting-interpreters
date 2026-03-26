@@ -68,6 +68,10 @@ void Interpreter::executeBlock(std::vector<std::unique_ptr<Stmt>> &statements,
     this->environment = previous;
 }
 
+void Interpreter::resolve(void *expr, int depth) {
+    locals.insert({expr, depth});
+}
+
 bool Interpreter::isTruthy(Object &object) {
     if (std::holds_alternative<std::monostate>(object)) return false;
     if (std::holds_alternative<bool>(object)) return std::get<bool>(object);
@@ -135,6 +139,17 @@ void Interpreter::checkNumberOperands(Token &op, Object &left, Object &right) {
         std::holds_alternative<double>(right)) 
         return;
     throw RuntimeError(op, "Operands must be numbers.");
+}
+
+template <class T>
+Object Interpreter::lookUpVariable(Token &name, T *expr) {
+    std::unordered_map<void*, int>::iterator it = locals.find(expr);
+    if (it != locals.end()) {
+        return environment->getAt(it->second, name.lexeme);
+    }
+    else {
+        return globals->get(name);
+    }
 }
 
 // Interpreter visitor
@@ -207,7 +222,16 @@ void Interpreter::operator()(While &stmt) {
 
 Object Interpreter::operator()(Assign &expr) {
     Object value = evaluate(expr.value.get());
-    environment.get()->assign(expr.name, value);
+
+    auto it = locals.find(&expr);
+    
+    if (it != locals.end()) {
+        environment->assignAt(it->second, expr.name, value);
+    }
+    else {
+        globals->assign(expr.name, value);
+    }
+
     return value;
 }
 
@@ -346,5 +370,5 @@ Object Interpreter::operator()(Unary &expr) {
 }
 
 Object Interpreter::operator()(Variable &expr) {
-    return environment.get()->get(expr.name);
+    return lookUpVariable(expr.name, &expr);
 }

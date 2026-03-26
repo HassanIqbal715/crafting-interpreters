@@ -10,24 +10,26 @@
 class Interpreter {
 private:
     std::shared_ptr<Environment> environment;
+    std::unordered_map<void*, int> locals;
 
-    Object evaluate(Expr* expr);
-    void execute(Stmt* stmt);
+    Object evaluate(Expr *expr);
+    void execute(Stmt *stmt);
     bool isTruthy(Object &object);
     bool isEqual(Object &a, Object &b);
     std::string stringify(Object &object);
     bool endsWith(std::string &str, std::string delimiter);
     void checkNumberOperand(Token &op, Object &right);
     void checkNumberOperands(Token &op, Object &left, Object &right);
+    template<class T> Object lookUpVariable(Token &name, T *expr);
 
 public:
     std::shared_ptr<Environment> globals;
 
     Interpreter();
     void interpret(std::vector<std::unique_ptr<Stmt>> &statements);
-
     void executeBlock(std::vector<std::unique_ptr<Stmt>> &statements, 
         std::shared_ptr<Environment> &environment);
+    void resolve(void *expr, int depth);
 
     void operator()(Block &stmt);
     void operator()(Break &stmt);

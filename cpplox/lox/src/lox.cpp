@@ -3,6 +3,7 @@
 #include "expr.h"
 #include "files.h"
 #include "parser.h"
+#include "resolver.h"
 #include "scanner.h"
 #include "token.h"
 #include "token_type.h"
@@ -44,8 +45,13 @@ void Lox::run(std::string_view source) {
 
     if (hadError) return;
 
-    interpreter.get()->interpret(statements);
+    Resolver resolver(interpreter.get());
+    resolver.resolve(statements);
+
+    if (hadError) return;
     
+    interpreter.get()->interpret(statements);
+
     for (int i = 0; i < statements.size(); i++) {
         globalMemoryStorage.push_back(std::move(statements[i]));
     }
