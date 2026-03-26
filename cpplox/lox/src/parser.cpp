@@ -101,7 +101,9 @@ std::unique_ptr<Expr> Parser::expression() {
 
 std::unique_ptr<Stmt> Parser::declaration() {
     try {
-        if (match(FUN)) return function("function");
+        if (match(CLASS)) return classDeclaration();
+        if (match(FUN)) return std::make_unique<Stmt>(
+            std::move(*function("function")));
         if (match(VAR)) return varDeclaration();
 
         return statement();
@@ -110,6 +112,20 @@ std::unique_ptr<Stmt> Parser::declaration() {
         synchronize();
         return NULL;
     }
+}
+
+std::unique_ptr<Stmt> Parser::classDeclaration() {
+    Token name = consume(IDENTIFIER, "Expect class name.");
+    consume(LEFT_BRACE, "Expect '{' before class body.");
+
+    std::vector<std::unique_ptr<Function>> methods;
+    while (!check(RIGHT_BRACE) && !isAtEnd()) {
+        methods.push_back(function("method"));
+    }
+
+    consume(RIGHT_BRACE, "Expect '}' after class body.");
+
+    return std::make_unique<Stmt>(Class{std::move(name), std::move(methods)});
 }
 
 std::unique_ptr<Stmt> Parser::statement() {
@@ -243,7 +259,7 @@ std::unique_ptr<Stmt> Parser::expressionStatement() {
     return std::make_unique<Stmt>(Expression{std::move(expr)});
 }
 
-std::unique_ptr<Stmt> Parser::function(std::string kind) {
+std::unique_ptr<Function> Parser::function(std::string kind) {
     Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
     consume(LEFT_PAREN, "Expect '(' after " + kind + " name.");
     std::vector<Token> parameters;
@@ -260,7 +276,7 @@ std::unique_ptr<Stmt> Parser::function(std::string kind) {
 
     consume(LEFT_BRACE, "Expect '{' before " + kind + " body.");
     std::vector<std::unique_ptr<Stmt>> body = block();
-    return std::make_unique<Stmt>(Function{std::move(name), 
+    return std::make_unique<Function>(Function{std::move(name), 
         std::move(parameters), std::move(body)});
 }
 
@@ -299,6 +315,11 @@ std::unique_ptr<Expr> Parser::assignment() {
             Token name = std::get<Variable>(*expr).name;
             return std::make_unique<Expr>(Assign{
                 std::move(name), std::move(right)});
+        }
+        else if (std::holds_alternative<Get>(*expr)) {
+            Get &get = std::get<Get>(*expr);
+            return std::make_unique<Expr>(Set{std::move(get.object), 
+                std::move(get.name), std::move(right)});
         }
 
         error(equals, "Inavlid assignment target.");
@@ -444,6 +465,11 @@ std::unique_ptr<Expr> Parser::call() {
         if (match(LEFT_PAREN)) {
             expr = finishCall(expr);
         }
+        else if (match(DOT)) {
+            Token name = consume(IDENTIFIER, "Expect property name after '.'.");
+            expr = std::make_unique<Expr>(Get{
+                std::move(expr), std::move(name)});
+        }
         else {
             break;
         }
@@ -461,6 +487,8 @@ std::unique_ptr<Expr> Parser::primary() {
     if (match(numberAndString)) {
         return std::make_unique<Expr>(Literal{previous().literal});
     }
+
+    if (match(THIS)) return std::make_unique<Expr>(This{previous()});
 
     if (match(IDENTIFIER)) {
         return std::make_unique<Expr>(Variable{previous()});

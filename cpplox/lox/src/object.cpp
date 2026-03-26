@@ -10,7 +10,11 @@ std::string ObjectToString::operator()(double val) {
 }
 
 std::string ObjectToString::operator()(std::shared_ptr<LoxCallable> val) {
-    return "callable instance";
+    return "callable";
+}
+
+std::string ObjectToString::operator()(std::shared_ptr<LoxInstance> val) {
+    return "instance";
 }
 
 std::string ObjectToString::operator()(std::string val) {

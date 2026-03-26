@@ -10,13 +10,21 @@
 class Resolver {
 private:    
     enum FunctionType {
-        NONE,
-        FUNCTION
+        FUNCTION_NONE,
+        FUNCTION,
+        INITIALIZER,
+        METHOD
+    };
+
+    enum ClassType {
+        CLASS_NONE,
+        CLASS
     };
 
     Interpreter *interpreter;
     std::vector<std::unique_ptr<std::unordered_map<std::string, bool>>> scopes;
     FunctionType currentFunction;
+    ClassType currentClass;
 
     void beginScope();
     void endScope();
@@ -36,6 +44,7 @@ public:
     // statements
     void operator()(Block &stmt);
     void operator()(Break &stmt);
+    void operator()(Class &stmt);
     void operator()(Expression &stmt);
     void operator()(Function &stmt);
     void operator()(If &stmt);
@@ -48,10 +57,13 @@ public:
     void operator()(Assign &expr);
     void operator()(Binary &expr);
     void operator()(Call &expr);
+    void operator()(Get &expr);
     void operator()(Grouping &expr);
     void operator()(Literal &expr);
     void operator()(Logical &expr);
+    void operator()(Set &expr);
     void operator()(Ternary &expr);
+    void operator()(This &expr);
     void operator()(Unary &expr);
     void operator()(Variable &expr);
 };

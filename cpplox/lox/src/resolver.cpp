@@ -5,6 +5,8 @@
 
 Resolver::Resolver(Interpreter* interpreter) {
     this->interpreter = interpreter;
+    currentFunction = FUNCTION_NONE;
+    currentClass = CLASS_NONE;
 }
 
 void Resolver::resolve(std::vector<std::unique_ptr<Stmt>> &statements) {
@@ -85,6 +87,29 @@ void Resolver::operator()(Block &stmt) {
 
 void Resolver::operator()(Break &stmt) {}
 
+void Resolver::operator()(Class &stmt) {
+    ClassType enclosingClass = currentClass;
+    currentClass = CLASS;
+
+    declare(stmt.name);
+    define(stmt.name);
+
+    beginScope();
+    scopes[scopes.size() - 1]->insert({"this", true});
+
+    for (auto &method : stmt.methods) {
+        FunctionType declaration = METHOD;
+        if (method->name.lexeme.compare("init") == 0) {
+            declaration = INITIALIZER;
+        }
+        resolveFunction(*method, declaration);
+    }
+
+    endScope();
+
+    currentClass = enclosingClass;
+}
+
 void Resolver::operator()(Expression &stmt) {
     resolve(stmt.expression);
 }
@@ -107,11 +132,14 @@ void Resolver::operator()(Print &stmt) {
 }
 
 void Resolver::operator()(Return &stmt) {
-    if (currentFunction == NONE) {
+    if (currentFunction == FUNCTION_NONE) {
         Lox::error(stmt.keyword, "Can't return from top-level code.");
     }
 
     if (stmt.value != NULL) {
+        if (currentFunction == INITIALIZER) {
+            Lox::error(stmt.keyword, "Can't return a value from initializer.");
+        }
         resolve(stmt.value);
     }
 }
@@ -149,6 +177,10 @@ void Resolver::operator()(Call &expr) {
     }
 }
 
+void Resolver::operator()(Get &expr) {
+    resolve(expr.object);
+}
+
 void Resolver::operator()(Grouping &expr) {
     resolve(expr.expression);
 }
@@ -160,10 +192,24 @@ void Resolver::operator()(Logical &expr) {
     resolve(expr.right);
 }
 
+void Resolver::operator()(Set &expr) {
+    resolve(expr.value);
+    resolve(expr.object);
+}
+
 void Resolver::operator()(Ternary &expr) {
     resolve(expr.left);
     resolve(expr.mid);
     resolve(expr.right);
+}
+
+void Resolver::operator()(This &expr) {
+    if (currentClass == CLASS_NONE) {
+        Lox::error(expr.keyword, "Can't use 'this' outside of a class.");
+        return;
+    }
+
+    resolveLocal(&expr, expr.keyword);
 }
 
 void Resolver::operator()(Unary &expr) {

@@ -14,10 +14,13 @@ int main(int argc, char* argv[]) {
         "Assign     : Token name, unique_ptr<Expr> value",
         "Binary     : unique_ptr<Expr> left, Token op, unique_ptr<Expr> right",
         "Call       : unique_ptr<Expr> callee, Token paren, vector<unique_ptr<Expr>> arguments",
+        "Get        : unique_ptr<Expr> object, Token name",
         "Grouping   : unique_ptr<Expr> expression",
         "Literal    : Object value",
         "Logical    : unique_ptr<Expr> left, Token op, unique_ptr<Expr> right",
+        "Set        : unique_ptr<Expr> object, Token name, unique_ptr<Expr> value",
         "Ternary    : unique_ptr<Expr> left, Token op1, unique_ptr<Expr> mid, Token op2, unique_ptr<Expr> right",
+        "This       : Token keyword",
         "Unary      : Token op, unique_ptr<Expr> right",
         "Variable   : Token name"
     });
@@ -25,6 +28,7 @@ int main(int argc, char* argv[]) {
     GenerateAst::defineAst(outputDir, "stmt", {
         "Block      : vector<unique_ptr<Stmt>> statements",
         "Break      : Token name",
+        "Class      : Token name, vector<unique_ptr<Function>> methods",
         "Expression : unique_ptr<Expr> expression",
         "Function   : Token name, vector<Token> params, vector<unique_ptr<Stmt>> body",
         "If         : unique_ptr<Expr> condition, unique_ptr<Stmt> thenBranch, unique_ptr<Stmt> elseBranch",

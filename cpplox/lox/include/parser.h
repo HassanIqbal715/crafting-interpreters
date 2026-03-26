@@ -19,6 +19,7 @@ private:
     // Parsing
     std::unique_ptr<Expr> expression();
     std::unique_ptr<Stmt> declaration();
+    std::unique_ptr<Stmt> classDeclaration();
     std::unique_ptr<Stmt> statement();
     std::unique_ptr<Stmt> breakStatement();
     std::unique_ptr<Stmt> forStatement();
@@ -28,7 +29,7 @@ private:
     std::unique_ptr<Stmt> varDeclaration();
     std::unique_ptr<Stmt> whileStatement();
     std::unique_ptr<Stmt> expressionStatement();
-    std::unique_ptr<Stmt> function(std::string kind);
+    std::unique_ptr<Function> function(std::string kind);
     std::vector<std::unique_ptr<Stmt>> block();
     std::unique_ptr<Expr> comma();
     std::unique_ptr<Expr> assignment();

@@ -26,7 +26,7 @@ Object Environment::get(Token &name) {
     throw RuntimeError(name, "Undefined variable '" + name.lexeme + "'.");
 }
 
-void Environment::assign(Token &name, Object &value) {
+void Environment::assign(Token &name, Object value) {
     auto it = values.find(name.lexeme);
     if (it != values.end()) {
         it->second = value;
@@ -58,5 +58,5 @@ Object Environment::getAt(int distance, std::string name) {
 }
 
 void Environment::assignAt(int distance, Token &name, Object value) {
-    ancestor(distance)->values.insert({name.lexeme, value});
+    ancestor(distance)->values[name.lexeme] = value;
 }

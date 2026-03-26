@@ -10,12 +10,28 @@ using namespace std;
 
 struct Stmt;
 
+struct Block;
+struct Break;
+struct Class;
+struct Expression;
+struct Function;
+struct If;
+struct Print;
+struct Return;
+struct Var;
+struct While;
+
 struct Block {
 	vector<unique_ptr<Stmt>> statements;
 };
 
 struct Break {
 	Token name;
+};
+
+struct Class {
+	Token name;
+	vector<unique_ptr<Function>> methods;
 };
 
 struct Expression {
@@ -53,8 +69,8 @@ struct While {
 	unique_ptr<Stmt> body;
 };
 
-using StmtVariant = std::variant<Block, Break, Expression, Function, If, 
-		Print, Return, Var, While>;
+using StmtVariant = std::variant<Block, Break, Class, Expression, Function, 
+		If, Print, Return, Var, While>;
 
 struct Stmt : StmtVariant {
 	using StmtVariant::variant;

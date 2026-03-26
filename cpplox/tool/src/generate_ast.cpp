@@ -34,6 +34,8 @@ void GenerateAst::defineAst(std::string outputDir, std::string baseName,
     file << "using namespace std;\n" << std::endl;
     file << "struct " << capitalize(baseName) << ";\n" << std::endl;
 
+    defineForward(file, types);
+
     for (std::string type : types) {
         std::string className = trim(split(type, ":")[0]);
         std::string fields = trim(split(type, ":")[1]);
@@ -45,6 +47,14 @@ void GenerateAst::defineAst(std::string outputDir, std::string baseName,
 
     if (file.is_open())
         file.close();
+}
+
+void GenerateAst::defineForward(std::fstream &file, 
+        std::vector<std::string> declarations) {
+    for (std::string declaration : declarations) {
+        file << "struct " << trim(split(declaration, ":")[0]) << ";\n";
+    }
+    file << std::endl;
 }
 
 void GenerateAst::defineType(std::fstream &file, std::string baseName,

@@ -1,12 +1,15 @@
 #include "interpreter.h"
 #include "break.h"
+#include "lox_class.h"
 #include "lox_function.h"
+#include "lox_instance.h"
 #include "lox.h"
 #include "native_function.h"
 #include "return.h"
 #include "runtime_error.h"
 #include <chrono>
 #include <cmath>
+#include <sstream>
 #include <vector>
 #define EPSILON 1e-9
 
@@ -119,6 +122,12 @@ std::string Interpreter::stringify(Object &object) {
         return "callable";
     }
 
+    if (std::holds_alternative<std::shared_ptr<LoxInstance>>(object)) {
+        std::ostringstream ss;
+        ss << *std::get<std::shared_ptr<LoxInstance>>(object);
+        return ss.str();
+    }
+
     return std::get<std::string>(object);
 }
 
@@ -166,6 +175,22 @@ void Interpreter::operator()(Break &stmt) {
     throw BreakException();
 }
 
+void Interpreter::operator()(Class &stmt) {
+    environment->define(stmt.name.lexeme, std::monostate{});
+
+    std::unordered_map<std::string, std::shared_ptr<LoxFunction>> methods;
+    for (auto &method : stmt.methods) {
+        std::shared_ptr<LoxFunction> function = std::make_shared<LoxFunction>(
+            method.get(), environment, 
+            (method->name.lexeme.compare("init") == 0)
+        );
+        methods.insert({method->name.lexeme, function});
+    }
+
+    std::shared_ptr<LoxClass> klass = std::make_shared<LoxClass>(
+        stmt.name.lexeme, methods);
+    environment->assign(stmt.name, klass);
+}
 
 void Interpreter::operator()(Expression &stmt) {
     evaluate(stmt.expression.get());
@@ -173,7 +198,7 @@ void Interpreter::operator()(Expression &stmt) {
 
 void Interpreter::operator()(Function &stmt) {
     std::shared_ptr<LoxFunction> function = 
-        std::make_shared<LoxFunction>(&stmt, environment);
+        std::make_shared<LoxFunction>(&stmt, environment, false);
     environment->define(stmt.name.lexeme, function);
 }
 
@@ -343,8 +368,31 @@ Object Interpreter::operator()(Logical &expr) {
     return evaluate(expr.right.get());
 }
 
+Object Interpreter::operator()(Get &expr) {
+    Object object = evaluate(expr.object.get());
+    if (std::holds_alternative<std::shared_ptr<LoxInstance>>(object)) {
+        auto instance = std::get<std::shared_ptr<LoxInstance>>(object); 
+        return instance->get(expr.name, instance);
+    }
+
+    throw RuntimeError(expr.name, "Only instances have properties.");
+}
+
 Object Interpreter::operator()(Grouping &expr) {
     return evaluate(expr.expression.get());
+}
+
+Object Interpreter::operator()(Set &expr) {
+    Object object = evaluate(expr.object.get());
+
+    if (!std::holds_alternative<std::shared_ptr<LoxInstance>>(object)) {
+        throw RuntimeError(expr.name, "Only instances have fields.");
+    }
+
+    Object value = evaluate(expr.value.get());
+    std::get<std::shared_ptr<LoxInstance>>(object)->set(expr.name, value);
+
+    return value;
 }
 
 Object Interpreter::operator()(Ternary &expr) {
@@ -354,6 +402,10 @@ Object Interpreter::operator()(Ternary &expr) {
 
     if (isTruthy(left)) return mid;
     else return right;
+}
+
+Object Interpreter::operator()(This &expr) {
+    return lookUpVariable(expr.keyword, &expr);
 }
 
 Object Interpreter::operator()(Unary &expr) {

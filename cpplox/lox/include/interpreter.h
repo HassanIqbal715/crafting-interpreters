@@ -31,8 +31,10 @@ public:
         std::shared_ptr<Environment> &environment);
     void resolve(void *expr, int depth);
 
+    // statements
     void operator()(Block &stmt);
     void operator()(Break &stmt);
+    void operator()(Class &stmt);
     void operator()(Expression &stmt);
     void operator()(Function &stmt);
     void operator()(If &stmt);
@@ -40,13 +42,18 @@ public:
     void operator()(Return &stmt);
     void operator()(Var &stmt);
     void operator()(While &stmt);
+
+    // expressions
     Object operator()(Assign &expr);
     Object operator()(Binary &expr);
     Object operator()(Call &expr);
+    Object operator()(Get &expr);
     Object operator()(Grouping &expr);
     Object operator()(Literal &expr);
     Object operator()(Logical &expr);
+    Object operator()(Set &expr);
     Object operator()(Ternary &expr);
+    Object operator()(This &expr);
     Object operator()(Unary &expr);
     Object operator()(Variable &expr);
 };

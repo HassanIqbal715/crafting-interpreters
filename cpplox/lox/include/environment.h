@@ -15,7 +15,7 @@ public:
     Environment(std::shared_ptr<Environment> &enclosing);
     
     Object get(Token &name);
-    void assign(Token &name, Object &value);
+    void assign(Token &name, Object value);
     void define(std::string name, Object value);
     Environment* ancestor(int distance);
     Object getAt(int distance, std::string name);
