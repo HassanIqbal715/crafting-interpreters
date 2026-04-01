@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "value.h"
+#include "line.h"
 
 // Enum with all the OpCodes
 typedef enum {
@@ -16,7 +17,7 @@ typedef struct {
     int count; // total used elements.
     int capacity; // total allocated elements.
     uint8_t* code; // each instruction element is of 1 byte.
-    int* lines;
+    LineArray lines;
     ValueArray constants;
 } Chunk;
 
@@ -24,5 +25,6 @@ void initChunk(Chunk* chunk);
 void freeChunk(Chunk* chunk);
 void writeChunk(Chunk* chunk, uint8_t byte, int line);
 int addConstant(Chunk* chunk, Value value);
+int getLine(Chunk* chunk, int byteIndex);
 
 #endif

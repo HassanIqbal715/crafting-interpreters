@@ -1,5 +1,5 @@
 add_library(
-    lox chunk.c debug.c memory_manager.c value.c
+    lox chunk.c debug.c line.c memory_manager.c value.c
 )
 
 add_executable(Lox main.c)
