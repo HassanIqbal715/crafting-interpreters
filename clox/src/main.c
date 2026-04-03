@@ -9,13 +9,14 @@ int main(int argc, const char* argv[]) {
 
     int constant = addConstant(&chunk, 6.7);
     
-    writeChunk(&chunk, OP_CONSTANT, 67); // expects a constant after this
-    writeChunk(&chunk, constant, 67);
-    writeChunk(&chunk, OP_RETURN, 67);
-    writeChunk(&chunk, OP_RETURN, 68);
+    for (int i = 0; i < 3; i++) {
+        writeConstant(&chunk, i*2, i%100);
+    }
 
     disassembleChunk(&chunk, "test chunk");
 
-    freeChunk(&chunk);
+    // freeChunk(&chunk);
+
+    reallocate(NULL, 0, 0, true); // destroy memory
     return 0;
 }
