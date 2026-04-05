@@ -42,7 +42,10 @@ sizeof(type) * (newCount), 0)
 #define FREE_ARRAY(type, pointer, oldCount) \
 reallocate(pointer, sizeof(type) * (oldCount), 0, 0)
 
-#define MEM_SIZE 1024 * sizeof(uint8_t) * 16
+#define DESTROY_MEMORY() \
+reallocate(NULL, 0, 0, true)
+
+#define MEM_SIZE 1024 * sizeof(uint8_t) * 128
 
 void* reallocate(void* pointer, size_t oldSize, size_t newSize, bool destroy);
 
