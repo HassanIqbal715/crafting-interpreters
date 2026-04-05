@@ -1,4 +1,6 @@
 #include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
 
 #include "chunk.h"
 #include "memory_manager.h"

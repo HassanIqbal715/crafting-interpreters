@@ -1,22 +1,30 @@
 #include "common.h"
 #include "chunk.h"
 #include "debug.h"
-#include <stdio.h>
+#include "vm.h"
 
 int main(int argc, const char* argv[]) {
+    initVM();
+
     Chunk chunk;
     initChunk(&chunk);
 
-    int constant = addConstant(&chunk, 6.7);
-    
-    for (int i = 0; i < 3; i++) {
-        writeConstant(&chunk, i*2, i%100);
-    }
+    // 4 - 3 * -2 without OP_SUBTRACT
+    writeConstant(&chunk, 4, 1);
+    writeConstant(&chunk, 3, 1);
+    writeConstant(&chunk, 2, 1);
+    writeChunk(&chunk, OP_NEGATE, 1);
+    writeChunk(&chunk, OP_MULTIPLY, 1);
+    writeChunk(&chunk, OP_NEGATE, 1);
+    writeChunk(&chunk, OP_ADD, 1);
+
+    writeChunk(&chunk, OP_RETURN, 2);
 
     disassembleChunk(&chunk, "test chunk");
+    interpret(&chunk);
 
-    // freeChunk(&chunk);
-
-    reallocate(NULL, 0, 0, true); // destroy memory
+    freeVM();
+    freeChunk(&chunk);
+    DESTROY_MEMORY();
     return 0;
 }

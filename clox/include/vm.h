@@ -1,0 +1,39 @@
+#ifndef clox_vm_h
+#define clox_vm_h
+
+#include "chunk.h"
+#include "value.h"
+
+// #define STACK_MAX 256
+
+typedef struct {
+    int count;
+    int capacity;
+    Value* stack;
+    Value* stackTop;
+} Stack;
+
+typedef struct {
+    Chunk* chunk;
+    uint8_t* ip;
+    Stack stack;
+} VM;
+
+typedef enum {
+    INTERPRET_OK,
+    INTERPRET_COMPILE_ERROR,
+    INTERPRET_RUNTIME_ERROR
+} InterpretResult;
+
+void initStack(Stack* stack);
+void writeStack(Stack* stack, Value value);
+void freeStack(Stack* stack);
+
+void initVM();
+void freeVM();
+InterpretResult interpret(Chunk* chunk);
+void push(Value value);
+Value pop();
+Value* peek();
+
+#endif
