@@ -142,6 +142,10 @@ void initFreeList(Memory* memory, FreeHeader** head) {
     if (memory->memory == NULL) return;
 
     (*head)->address = memory->memory + sizeof(FreeHeader);
+    if (memory->size < sizeof(FreeHeader)) {
+        fprintf(stderr, "Not enough memory to initialize free list\n");
+        exit(74);
+    }
     (*head)->size = memory->size - sizeof(FreeHeader);
     (*head)->next = NULL;
 }

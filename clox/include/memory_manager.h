@@ -40,7 +40,13 @@ void initFreeList(Memory* memory, FreeHeader** head);
 sizeof(type) * (newCount), 0)
 
 #define FREE_ARRAY(type, pointer, oldCount) \
-reallocate(pointer, sizeof(type) * (oldCount), 0, 0)
+reallocate(pointer, sizeof(type) * (oldCount), 0, false)
+
+#define MALLOC(size) \
+reallocate(NULL, 0, size, false)
+
+#define FREE(pointer) \
+reallocate(pointer, 0, 0, false)
 
 #define DESTROY_MEMORY() \
 reallocate(NULL, 0, 0, true)
