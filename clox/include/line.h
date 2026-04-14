@@ -4,8 +4,6 @@
 #include "common.h"
 #include "memory_manager.h"
 
-typedef double Value;
-
 // Struct with line info
 typedef struct {
     int line; // line number

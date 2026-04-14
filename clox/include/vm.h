@@ -17,6 +17,7 @@ typedef struct {
     Chunk* chunk;
     uint8_t* ip;
     Stack stack;
+    Obj* objects;
 } VM;
 
 typedef enum {
@@ -24,6 +25,8 @@ typedef enum {
     INTERPRET_COMPILE_ERROR,
     INTERPRET_RUNTIME_ERROR
 } InterpretResult;
+
+extern VM vm;
 
 void initStack(Stack* stack);
 void writeStack(Stack* stack, Value value);
@@ -34,6 +37,6 @@ void freeVM();
 InterpretResult interpret(const char* source);
 void push(Value value);
 Value pop();
-Value* peek();
+Value* peekPtr();
 
 #endif
