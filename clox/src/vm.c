@@ -42,7 +42,7 @@ void writeStack(Stack* stack, Value value) {
             stack->capacity);
         stack->stackTop = &stack->stack[stack->count];
     }
-    
+
     *stack->stackTop = value;
     stack->stackTop++;
     stack->count++;
@@ -112,6 +112,10 @@ static void concatenate() {
 
 static InterpretResult run() {
 #define READ_BYTE() (*vm.ip++)
+#define READ_BYTE_LONG() ( \
+    ((uint32_t) (READ_BYTE() << 16)) | \
+    ((uint32_t) (READ_BYTE() << 8)) | \
+    ((uint32_t) READ_BYTE()))
 #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
 #define READ_CONSTANT_LONG() (vm.chunk->constants.values[ \
     ((uint32_t) (READ_BYTE() << 16)) | \
@@ -159,13 +163,24 @@ static InterpretResult run() {
             case OP_FALSE: push(BOOL_VAL(false)); break;
             case OP_POP: pop(); break;
             case OP_POPN: popn((int)READ_BYTE()); break;
+            case OP_POPN_LONG: popn((int)READ_BYTE_LONG()); break;
             case OP_GET_LOCAL: {
                 uint8_t slot = READ_BYTE();
                 push(vm.stack.stack[slot]);
                 break;
             }
+            case OP_GET_LOCAL_LONG: {
+                uint32_t slot = READ_BYTE_LONG();
+                push(vm.stack.stack[slot]);
+                break;
+            }
             case OP_SET_LOCAL: {
                 uint8_t slot = READ_BYTE();
+                vm.stack.stack[slot] = peek(0);
+                break;
+            }
+            case OP_SET_LOCAL_LONG: {
+                uint32_t slot = READ_BYTE_LONG();
                 vm.stack.stack[slot] = peek(0);
                 break;
             }

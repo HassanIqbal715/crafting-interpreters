@@ -47,8 +47,13 @@ typedef struct {
 } Local;
 
 typedef struct {
-    Local locals[UINT8_COUNT];
-    int localCount;
+    Local* locals;
+    int count;
+    int capacity;    
+} LocalArray;
+
+typedef struct {
+    LocalArray locals;
     int scopeDepth;
 } Compiler;
 
@@ -146,7 +151,7 @@ static uint32_t makeConstant(Value value) {
 
 static void emitConstant(Value value) {
     uint32_t constant = makeConstant(value);
-    if (constant <= UINT8_MAX) {
+    if (!IS_LONG(constant)) {
         emitBytes(OP_CONSTANT, (uint8_t)constant);
     }
     else {
@@ -155,9 +160,33 @@ static void emitConstant(Value value) {
     }
 }
 
+static void initLocalArray(LocalArray* array) {
+    array->capacity = 0;
+    array->count = 0;
+    array->locals = NULL;
+}
+
+static void writeLocalArray(LocalArray* array, Token name, int depth) {
+    if (array->capacity < array->count + 1) {
+        int oldCapacity = array->capacity;
+        array->capacity = GROW_CAPACITY(oldCapacity);
+        array->locals = GROW_ARRAY(Local, array->locals, 
+            oldCapacity, array->capacity);
+    }
+
+    array->locals[array->count].name = name;
+    array->locals[array->count].depth = depth;
+    array->count++;
+}
+
+static void freeLocalArray(LocalArray* array) {
+    FREE_ARRAY(Local, array->locals, array->capacity);
+    initLocalArray(array);
+}
+
 static void initCompiler(Compiler* compiler) {
-    compiler->localCount = 0;
     compiler->scopeDepth = 0;
+    initLocalArray(&compiler->locals);
     current = compiler;
 }
 
@@ -168,6 +197,7 @@ static void endCompiler() {
         disassembleChunk(currentChunk(), "code");
     }
 #endif
+    freeLocalArray(&current->locals);
 }
 
 static void beginScope() {
@@ -178,12 +208,20 @@ static void endScope() {
     current->scopeDepth--;
 
     int numberOfPops = 0;
-    while(current->localCount > 0 && 
-        current->locals[current->localCount - 1].depth > current->scopeDepth) {
+    while(current->locals.count > 0 && 
+          current->locals.locals[current->locals.count - 1].depth > 
+          current->scopeDepth) {
         numberOfPops++;
-        current->localCount--;
+        current->locals.count--;
     }
-    emitBytes(OP_POPN, (uint8_t)numberOfPops);
+
+    if (!IS_LONG(numberOfPops)) {
+        emitBytes(OP_POPN, (uint8_t)numberOfPops);
+    }
+    else {
+        emitBytes(OP_POPN_LONG, (uint8_t)(numberOfPops >> 16));
+        emitBytes((uint8_t)(numberOfPops >> 8), (uint8_t)numberOfPops);
+    }
 }
 
 static void expression();
@@ -202,8 +240,8 @@ static bool identifiersEqual(Token* a, Token* b) {
 }
 
 static int resolveLocal(Compiler* compiler, Token* name) {
-    for (int i = compiler->localCount - 1; i >= 0; i--) {
-        Local* local = &compiler->locals[i];
+    for (int i = compiler->locals.count - 1; i >= 0; i--) {
+        Local* local = &compiler->locals.locals[i];
         if (identifiersEqual(name, &local->name)) {
             if (local->depth == -1) {
                 error("Can't read local variable in its own initializer");
@@ -216,22 +254,20 @@ static int resolveLocal(Compiler* compiler, Token* name) {
 }
 
 static void addLocal(Token name) {
-    if (current->localCount == UINT8_COUNT) {
+    if (current->locals.count == UINT24_COUNT) {
         error("Too many local variables in function.");
         return;
     }
 
-    Local* local = &current->locals[current->localCount++];
-    local->name = name;
-    local->depth = -1;
+    writeLocalArray(&current->locals, name, -1);
 }
 
 static void declareVariable() {
     if (current->scopeDepth == 0) return;
 
     Token* name = &parser.previous;
-    for (int i = current->localCount - 1; i >= 0; i--) {
-        Local* local = &current->locals[i];
+    for (int i = current->locals.count - 1; i >= 0; i--) {
+        Local* local = &current->locals.locals[i];
         if (local->depth != -1 && local->depth < current->scopeDepth) {
             break;
         }
@@ -254,7 +290,8 @@ static uint32_t parseVariable(const char* errorMessage) {
 }
 
 static void markInitialized() {
-    current->locals[current->localCount - 1].depth = current->scopeDepth;
+    current->locals.locals[current->locals.count - 1].depth = 
+        current->scopeDepth;
 }
 
 static void defineVariable(uint32_t global) {
@@ -263,7 +300,7 @@ static void defineVariable(uint32_t global) {
         return;
     }
 
-    if (global <= UINT8_MAX) {
+    if (!IS_LONG(global)) {
         emitBytes(OP_DEFINE_GLOBAL, global);
     }
     else {
@@ -407,43 +444,46 @@ static void namedVariable(Token name, bool canAssign) {
     uint8_t getOp, setOp;
     uint32_t arg = resolveLocal(current, &name);
     if (arg != -1) {
-        getOp = OP_GET_LOCAL;
-        setOp = OP_SET_LOCAL;
+        if (!IS_LONG(arg)) {
+            getOp = OP_GET_LOCAL;
+            setOp = OP_SET_LOCAL;
+        }
+        else {
+            getOp = OP_GET_LOCAL_LONG;
+            setOp = OP_SET_LOCAL_LONG;
+        }
     }
     else {
         arg = identifierConstant(&name);
-        getOp = OP_GET_GLOBAL;
-        setOp = OP_SET_GLOBAL;
+        if (!IS_LONG(arg)) {
+            getOp = OP_GET_GLOBAL;
+            setOp = OP_SET_GLOBAL;
+        }
+        else {
+            getOp = OP_GET_GLOBAL_LONG;
+            setOp = OP_SET_GLOBAL_LONG;
+        }
     }
 
     if (canAssign && match(TOKEN_EQUAL)) {
         expression();
-        emitBytes(setOp, (uint8_t)arg);
+        if (!IS_LONG(arg)) {
+            emitBytes(setOp, (uint8_t)arg);
+        }
+        else {
+            emitBytes(setOp, (uint8_t)(arg >> 16));
+            emitBytes((uint8_t)(arg >> 8), (uint8_t)arg);
+        }
     }
     else {
-        emitBytes(getOp, (uint8_t)arg);
+        if (!IS_LONG(arg)) {
+            emitBytes(getOp, (uint8_t)arg);
+        }
+        else {
+            emitBytes(getOp, (uint8_t)(arg >> 16));
+            emitBytes((uint8_t)(arg >> 8), (uint8_t)arg);
+        }
     }
-
-    // if (arg <= UINT8_MAX) {
-    //     if (canAssign && match(TOKEN_EQUAL)) {
-    //         expression();
-    //         emitBytes(OP_SET_GLOBAL, arg);
-    //     }
-    //     else {
-    //         emitBytes(OP_GET_GLOBAL, (uint8_t)arg);
-    //     }
-    // }
-    // else {
-    //     if (canAssign && match(TOKEN_EQUAL)) {
-    //         expression();
-    //         emitBytes(OP_SET_GLOBAL_LONG, (uint8_t)(arg >> 16));
-    //         emitBytes((uint8_t)(arg >> 8), (uint8_t)arg);
-    //     }
-    //     else {
-    //         emitBytes(OP_GET_GLOBAL_LONG, (uint8_t)(arg >> 16));
-    //         emitBytes((uint8_t)(arg >> 8), (uint8_t)arg);
-    //     }
-    // }
 }
 
 static void variable(bool canAssign) {

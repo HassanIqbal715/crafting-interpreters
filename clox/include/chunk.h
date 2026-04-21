@@ -14,8 +14,11 @@ typedef enum {
     OP_FALSE,
     OP_POP,
     OP_POPN,
+    OP_POPN_LONG,
     OP_GET_LOCAL,
+    OP_GET_LOCAL_LONG,
     OP_SET_LOCAL,
+    OP_SET_LOCAL_LONG,
     OP_GET_GLOBAL,
     OP_GET_GLOBAL_LONG,
     OP_DEFINE_GLOBAL,
@@ -44,6 +47,8 @@ typedef struct {
     LineArray lines;
     ValueArray constants;
 } Chunk;
+
+#define IS_LONG(size) (size > UINT8_MAX)
 
 void initChunk(Chunk* chunk);
 void freeChunk(Chunk* chunk);
