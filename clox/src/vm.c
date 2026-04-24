@@ -242,6 +242,13 @@ static InterpretResult run() {
                 *stackPeek = BOOL_VAL(valuesEqual(*stackPeek, b));
                 break;
             }
+            case OP_EQUAL_AND_RETAIN: {
+                Value b = pop();
+                Value stackPeek = peek(0); // fetch only the value
+                stackPeek = BOOL_VAL(valuesEqual(stackPeek, b));
+                push(stackPeek); // push the result on to the stack
+                break;
+            }
             case OP_GREATER:  BINARY_OP(BOOL_VAL, >); break;
             case OP_LESS:     BINARY_OP(BOOL_VAL, <); break;
             case OP_ADD: {

@@ -500,6 +500,57 @@ static void printStatement() {
     emitByte(OP_PRINT);
 }
 
+static int switchCase() {
+    expression();
+    emitByte(OP_EQUAL_AND_RETAIN);
+
+    int nextCaseJump = emitJump(OP_JUMP_IF_FALSE);
+    emitByte(OP_POP);
+
+    consume(TOKEN_COLON, "Expect ':' after condition.");
+    statement();
+    
+    int jumpToEnd = emitJump(OP_JUMP);
+    
+    patchJump(nextCaseJump);
+    emitByte(OP_POP);
+
+    return jumpToEnd;
+}
+
+static void defaultCase() {
+    consume(TOKEN_COLON, "Expect ':' after condition.");
+    statement();
+}
+
+static void switchStatement() {
+    int switchStart = currentChunk()->count;
+    consume(TOKEN_LEFT_PAREN, "Expect '(' after 'switch'.");
+    expression();
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after identifier.");
+    consume(TOKEN_LEFT_BRACE, "Expect '{' after switch.");
+
+    int count = 0;
+    int cases[UINT8_COUNT];
+    while (match(TOKEN_CASE)) {
+        int jumpToEnd = switchCase();
+        cases[count++] = jumpToEnd;
+        if (count >= UINT8_COUNT) {
+            error("Can't have more than 256 cases.");
+        }
+    }
+    if (match(TOKEN_DEFAULT)) {
+        defaultCase();
+    }
+
+    consume (TOKEN_RIGHT_BRACE, "Expect '}' after switch body.");
+    
+    for (int i = 0; i < count; i++) {
+        patchJump(cases[i]);
+    }
+    emitByte(OP_POP); // pop the switch variable
+}
+
 static void whileStatement() {
     int loopStart = currentChunk()->count;
     consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
@@ -559,6 +610,9 @@ static void statement() {
     }
     else if (match(TOKEN_IF)) {
         ifStatement();
+    }
+    else if (match(TOKEN_SWITCH)) {
+        switchStatement();
     }
     else if (match(TOKEN_WHILE)) {
         whileStatement();

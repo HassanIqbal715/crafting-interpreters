@@ -103,6 +103,8 @@ int disassembleInstruction(Chunk* chunk, int offset) {
             return constantLongInstruction("OP_SET_GLOBAL_LONG", chunk, offset);
         case OP_EQUAL:
             return simpleInstruction("OP_EQUAL", offset);
+        case OP_EQUAL_AND_RETAIN:
+            return simpleInstruction("OP_EQUAL_AND_RETAIN", offset);
         case OP_GREATER:
             return simpleInstruction("OP_GREATER", offset);
         case OP_LESS:
