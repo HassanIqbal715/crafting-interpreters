@@ -4,4 +4,9 @@ add_library(
 )
 
 add_executable(Lox main.c)
+add_executable(Lox_debug main.c)
+
 target_link_libraries(Lox PRIVATE lox)
+target_link_libraries(Lox_debug PRIVATE lox)
+target_compile_options(Lox_debug PRIVATE -fsanitize=address)
+target_link_options(Lox_debug PRIVATE -fsanitize=address)
