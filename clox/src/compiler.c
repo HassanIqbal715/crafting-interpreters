@@ -52,9 +52,15 @@ typedef struct {
     int capacity;    
 } LocalArray;
 
+typedef struct Loop {
+    int start;
+    struct Loop* enclosing;
+} Loop;
+
 typedef struct {
     LocalArray locals;
     int scopeDepth;
+    Loop* currentLoop;
 } Compiler;
 
 Parser parser;
@@ -160,7 +166,6 @@ static uint32_t makeConstant(Value value) {
 
     if (result > UINT24_COUNT) { // 24bit limit
         error("Too many constants in one chunk");
-        parser.hadError = true;
         return 1;
     }
 
@@ -218,7 +223,13 @@ static void freeLocalArray(LocalArray* array) {
     initLocalArray(array);
 }
 
+static void initLoop(Loop* loop) {
+    loop->enclosing = NULL;
+    loop->start = 0;
+}
+
 static void initCompiler(Compiler* compiler) {
+    compiler->currentLoop = NULL;
     compiler->scopeDepth = 0;
     initLocalArray(&compiler->locals);
     current = compiler;
@@ -256,6 +267,17 @@ static void endScope() {
         emitBytes(OP_POPN_LONG, (uint8_t)(numberOfPops >> 16));
         emitBytes((uint8_t)(numberOfPops >> 8), (uint8_t)numberOfPops);
     }
+}
+
+static void loopScopeBegin(Loop* loop, int loopStart) {
+    initLoop(loop);
+    loop->enclosing = current->currentLoop;
+    loop->start = loopStart;
+    current->currentLoop = loop;
+}
+
+static void loopScopeEnd(Loop* loop) {
+    current->currentLoop = loop->enclosing;
 }
 
 static void expression();
@@ -429,6 +451,16 @@ static void expressionStatement() {
     emitByte(OP_POP);
 }
 
+static void continueStatement() {
+    if (!current->currentLoop) {
+        error("'continue' must be used inside a loop.");
+    }
+    else {
+        emitLoop(current->currentLoop->start);
+    }
+    consume(TOKEN_SEMICOLON, "Expect ';' after 'continue'.");
+}
+
 static void forStatement() {
     beginScope(); // to allow creation of local variables
     consume(TOKEN_LEFT_PAREN, "Expect '(' after 'for'.");
@@ -443,6 +475,7 @@ static void forStatement() {
     }
 
     int loopStart = currentChunk()->count; // get count before the condition.
+
     int exitJump = -1;
     if (!match(TOKEN_SEMICOLON)) {
         expression();
@@ -464,7 +497,9 @@ static void forStatement() {
         loopStart = incrementStart;
         patchJump(bodyJump);
     }
-    
+
+    Loop loop;
+    loopScopeBegin(&loop, loopStart);
     statement();
     emitLoop(loopStart);
 
@@ -473,6 +508,7 @@ static void forStatement() {
         emitByte(OP_POP); // Condition.
     }
 
+    loopScopeEnd(&loop);
     endScope();
 }
 
@@ -553,6 +589,10 @@ static void switchStatement() {
 
 static void whileStatement() {
     int loopStart = currentChunk()->count;
+
+    Loop loop;
+    loopScopeBegin(&loop, loopStart);
+
     consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
     expression();
     consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
@@ -564,6 +604,8 @@ static void whileStatement() {
 
     patchJump(exitJump);
     emitByte(OP_POP);
+
+    loopScopeEnd(&loop);
 }
 
 static void synchronize() {
@@ -604,6 +646,9 @@ static void declaration() {
 static void statement() {
     if (match(TOKEN_PRINT)) {
         printStatement();
+    }
+    else if (match(TOKEN_CONTINUE)) {
+        continueStatement();
     }
     else if (match(TOKEN_FOR)) {
         forStatement();
