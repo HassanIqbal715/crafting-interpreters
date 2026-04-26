@@ -83,7 +83,7 @@ static void errorAt(Token* token, const char* message) {
         // Nothing.
     }
     else {
-        fprintf(stderr, " at '%*s'", token->length, token->start);
+        fprintf(stderr, " at '%.*s'", token->length, token->start);
     }
 
     fprintf(stderr, ": %s\n", message);
