@@ -2,7 +2,6 @@
 #define clox_line_h
 
 #include "common.h"
-#include "memory_manager.h"
 
 // Struct with line info
 typedef struct {

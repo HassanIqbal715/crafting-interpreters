@@ -1,4 +1,5 @@
 #include "line.h"
+#include "memory_manager.h"
 
 void initLineArray(LineArray* array) {
     array->capacity = 0;
