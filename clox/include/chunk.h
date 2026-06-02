@@ -25,6 +25,8 @@ typedef enum {
     OP_DEFINE_GLOBAL_LONG,
     OP_SET_GLOBAL,
     OP_SET_GLOBAL_LONG,
+    OP_GET_UPVALUE,
+    OP_SET_UPVALUE,
     OP_EQUAL,
     OP_EQUAL_AND_RETAIN,
     OP_GREATER,
@@ -40,6 +42,8 @@ typedef enum {
     OP_JUMP_IF_FALSE,
     OP_LOOP,
     OP_CALL,
+    OP_CLOSURE,
+    OP_CLOSE_UPVALUE,
     OP_RETURN
 } OpCode;
 
